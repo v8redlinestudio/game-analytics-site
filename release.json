@@ -1,6 +1,6 @@
 {
   "source_repository": "rivergameforge-cell/ProjectManager",
-  "source_commit": "a73b142890e5b22035ef1a9bf6a5814876240385",
+  "source_commit": "4fd0109cdf8f81407743aee0c1d162df0df1a093",
   "files": {
     "index.html": "6c5ec50fdf2b594f470561c35202c6cd270b0800b1cff36cd5f83def9a7b0dbf",
     "app.js": "4ebee362d369b3df0c5f3f3f3c5df55a6117c8b809ae7dc25e6ee3aeea89af08",
@@ -9,5 +9,6 @@
     "styles.css": "d8321d02c9e57faab55fcfcd46f8805b43c2d5b015adc8903725f5322bdcf892",
     "privacy.html": "26b31a959bcaa6cc48e0f6b81b9de9589b5ef47b8e26e73aac596e198b6fca97",
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-  }
+  },
+  "oauth_origin": "https://v8redlinestudio.github.io"
 }

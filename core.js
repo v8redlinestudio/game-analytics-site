@@ -68,7 +68,7 @@
   }
 
   class Reports {
-    constructor(fetcher = globalThis.fetch, now = Date.now) {
+    constructor(fetcher = (...args) => globalThis.fetch(...args), now = Date.now) {
       this.fetcher = fetcher;
       this.now = now;
       this.cache = new Map();
