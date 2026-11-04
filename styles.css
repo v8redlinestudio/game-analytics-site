@@ -719,3 +719,6 @@ button:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid
 
 main > .game-picker { max-width: 360px; padding: 0 0 22px; }
 @media (max-width: 1000px) { .sidebar { width: 65px; } }
+
+/* Keep the login and report headings at the top of the workspace. */
+main { margin: 0 auto; }
