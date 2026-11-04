@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; connect-src 'self' https://accounts.google.com/gsi/ https://analyticsdata.googleapis.com https://openidconnect.googleapis.com; frame-src https://accounts.google.com/gsi/; img-src 'self' data:; base-uri 'none'; object-src 'none'; form-action 'none'"
+    />
+    <title>V8REDLINE · 게임 운영센터</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="https://accounts.google.com/gsi/client"></script>
+    <script defer src="core.js"></script>
+    <script defer src="attribution.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-icon">✦</span>
+          <div><b>V8REDLINE</b><small>GAME ANALYTICS</small></div>
+        </div>
+        <p class="nav-label">GAME WORKSPACE</p>
+        <a class="nav-item selected" href="#portfolio"><span>▦</span> 전체 게임 현황</a>
+        <a class="nav-item" href="#game-detail"><span>◈</span> 선택 게임 상세</a>
+        <button id="manage-games" class="nav-item">⚙ 게임 연결 관리</button>
+        <p class="sidebar-note">11개 게임 · 계정 한 번 연결<br>실제 GA4 데이터로 운영 현황을 확인합니다.</p>
+        <div class="side-footer">
+          <span class="dot"></span> Firebase Analytics
+          <small>게임 운영 리포트</small>
+        </div>
+      </aside>
+      <main id="overview">
+        <header>
+          <div>
+            <p class="eyebrow">V8REDLINE <span>/</span> ANALYTICS</p>
+            <h1 id="page-heading">전체 게임 현황 <span>✦</span></h1>
+            <p class="subtitle">
+              게임별 현황을 비교하고, 필요한 분석을 한곳에서 확인하세요.
+            </p>
+          </div>
+          <div class="head-actions">
+            <button
+              id="settings-btn"
+              class="icon-btn"
+              title="연결 설정"
+              aria-label="연결 설정"
+            >
+              ⚙</button
+            ><button id="login-btn" class="btn primary">Google로 연결</button
+            ><button id="logout-btn" class="btn subtle hidden">
+              연결 끊기
+            </button>
+          </div>
+        </header>
+        <label class="game-picker" for="game-select">분석할 게임<select id="game-select"><option value="all">전체 게임</option></select></label>
+
+        <section id="welcome" class="notice">
+          <div class="notice-icon">✦</div>
+          <div>
+            <b>Google로 로그인해 주세요</b>
+            <p>
+              v8redline.studio@gmail.com 계정으로 연결하면 또 보스냐의 통계를 가져옵니다. 다른 게임은 연결 관리에서 GA4 속성 ID를 추가하세요.
+            </p>
+          </div>
+          <button id="welcome-connect" class="text-btn">연결하기 →</button>
+        </section>
+        <div id="private-content" hidden>
+          <div class="toolbar">
+            <div class="status">
+              <span id="status-dot" class="status-dot"></span
+              ><span id="status-text">연결 전</span
+              ><span class="divider">/</span
+              ><span id="updated">데이터를 불러오지 않았어요</span>
+            </div>
+            <div class="filters">
+              <label data-ubr>유입 <select id="acquisition"><option value="">전체 유입</option><option value="meta">메타 유료 유입</option></select></label>
+              <label data-ubr>캠페인 <select id="campaign"><option value="">전체 캠페인</option></select></label>
+              <label data-ubr>광고 <select id="ad"><option value="">전체 광고</option></select></label>
+              <label
+                >국가
+                <select id="country">
+                  <option value="">전체 국가</option>
+                  <option value="Brazil">브라질</option>
+                  <option value="South Korea">대한민국</option>
+                </select></label
+              ><label
+                >기간
+                <select id="period">
+                  <option value="6daysAgo">최근 7일</option>
+                  <option value="27daysAgo" selected>최근 28일</option>
+                  <option value="89daysAgo">최근 90일</option>
+                </select></label
+              ><button id="refresh-btn" class="btn subtle" disabled>
+                ↻ 새로고침
+              </button>
+            </div>
+          </div>
+          <div
+            id="quality-note"
+            class="quality-note hidden"
+            role="status"
+          ></div>
+          <section class="panel portfolio" id="portfolio">
+            <div class="panel-head"><div><p class="kicker">YOUR GAMES, ONE VIEW</p><h2>게임 포트폴리오</h2><p>선택 기간의 GA4 활성·신규 사용자입니다. 오늘 수치는 처리 중일 수 있습니다.</p></div><span id="portfolio-count" class="tag">연결 대기</span></div>
+            <div class="table-wrap"><table><thead><tr><th>게임</th><th>연결 상태</th><th>활성 사용자</th><th>신규 사용자</th><th>속성 시간대</th><th>확인 시각·집계 상태</th><th></th></tr></thead><tbody id="portfolio-body"></tbody></table></div>
+            <p class="panel-note">연결 필요·권한 오류·데이터 없음을 구분합니다. 전체 게임의 동일 이용자를 합쳐 계산하지 않습니다. 이 표는 국가·기간 필터를 적용하며 게임 상세의 유입 필터는 제외합니다.</p>
+          </section>
+          <p id="selected-note" class="quality-note" role="status"></p>
+          <div id="detail-summary" hidden>
+          <section class="stats" aria-label="핵심 지표">
+            <article class="stat">
+              <div class="stat-top">
+                <span>활성 사용자</span><i class="blue">♟</i>
+              </div>
+              <strong id="active-users">—</strong
+              ><small>선택 기간에 플레이한 사용자</small>
+            </article>
+            <article class="stat">
+              <div class="stat-top">
+                <span>신규 사용자</span><i class="gold">✦</i>
+              </div>
+              <strong id="new-users">—</strong
+              ><small>선택 기간에 처음 방문</small>
+            </article>
+            <article class="stat">
+              <div class="stat-top">
+                <span>보스 도전</span><i class="red">⚔</i>
+              </div>
+              <strong id="boss-attempts">—</strong
+              ><small>도전 이벤트 횟수</small>
+            </article>
+            <article class="stat">
+              <div class="stat-top">
+                <span>광고 보상 획득</span><i class="green">▶</i>
+              </div>
+              <strong id="rewards-earned">—</strong
+              ><small>광고 보상 획득 횟수</small>
+            </article>
+          </section>
+          </div>
+          <div id="game-detail" hidden>
+          <section class="panel acquisition-panel" id="acquisition-report">
+            <div class="panel-head"><div><p class="kicker">META ACQUISITION</p><h2>광고별 설치와 게임 진행</h2><p>선택 기간에 처음 유입된 사용자를 광고별로 비교합니다.</p></div><span class="pill">사용자 수</span></div>
+            <p class="acquisition-state">Meta 앱 등록·광고 계정 연결은 완료했으며, 앱 이벤트 수신과 실제 광고 클릭 후 설치 귀속은 아직 검증 전입니다. 아래 표는 추적 매개변수로 Google Analytics에 확인된 메타 유료 유입만 표시합니다.</p>
+            <div class="table-wrap"><table class="acquisition-table"><thead><tr><th>기록된 출처</th><th>캠페인 ID</th><th>광고 세트 ID</th><th>광고 ID</th><th>설치 후 첫 실행</th><th>게임 진입</th><th>튜토리얼 완료</th><th>보스 도전</th><th>보스 처치</th><th>광고 보상 획득</th></tr></thead><tbody id="acquisition-table"><tr><td colspan="10" class="empty">연결 후 광고별 기록이 표시됩니다.</td></tr></tbody></table></div>
+            <p class="panel-note">다운로드 후 실행하지 않은 설치는 집계되지 않습니다. 각 행동은 사용자 수이며 순차 도달률이 아닙니다. 캠페인이나 광고 ID가 없는 기록은 미확인으로 표시합니다. 메타 광고 관리자의 설치 수와는 집계 기준이 다릅니다.</p>
+            <details class="campaign-builder"><summary>광고 연결용 Google Play 링크 만들기</summary><p>메타에서 확인한 숫자 ID를 입력하세요. 광고 유형이 이 링크를 지원하는지 확인하고 신규 설치 경로를 검증한 뒤 사용하세요.</p><div class="filters"><label data-ubr>캠페인 ID<input id="link-campaign" inputmode="numeric" maxlength="32"></label><label>광고 세트 ID<input id="link-adset" inputmode="numeric" maxlength="32"></label><label>광고 ID<input id="link-ad" inputmode="numeric" maxlength="32"></label><button id="build-link" class="btn subtle">링크 만들기</button></div><label class="field">생성된 설치 링크<textarea id="play-link" readonly rows="3"></textarea></label><p id="link-message" role="status"></p></details>
+          </section>
+          <div class="grid">
+            <section class="panel wide" id="progress">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">PLAYER JOURNEY</p>
+                  <h2>첫 플레이 여정</h2>
+                  <p>신규 사용자가 각 단계를 순서대로 통과한 비율입니다.</p>
+                </div>
+                <span class="tag">신규 사용자 기준</span>
+              </div>
+              <div id="funnel" class="placeholder">
+                <span>◈</span>
+                <p>연결 후 단계별 진행을 확인할 수 있어요.</p>
+              </div>
+              <div class="footnote">
+                튜토리얼을 건너뛴 사용자는 다음 단계에 포함되지 않을 수
+                있습니다. Google의 퍼널 API는 미리보기 단계입니다.
+              </div>
+            </section>
+            <section class="panel narrow" id="ads">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">MONETIZATION</p>
+                  <h2>광고 보상 흐름</h2>
+                  <p>요청부터 보상 저장까지</p>
+                </div>
+                <span class="panel-symbol">▷</span>
+              </div>
+              <div id="ads-list" class="placeholder">
+                <span>◌</span>
+                <p>연결 후 광고 흐름을 보여드려요.</p>
+              </div>
+              <div class="footnote">
+                각 값은 사용자 수가 아닌 이벤트 횟수입니다.
+              </div>
+            </section>
+            <section class="panel wide" id="boss">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">BOSS ENCOUNTERS</p>
+                  <h2>보스 도전 현황</h2>
+                  <p>지역과 회차별 전투 결과를 확인하세요.</p>
+                </div>
+                <span class="tag light">일반 · 최종 보스</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>지역</th>
+                      <th>회차</th>
+                      <th>종류</th>
+                      <th>전투 결과</th>
+                      <th>승리</th>
+                      <th>승률</th>
+                    </tr>
+                  </thead>
+                  <tbody id="boss-table">
+                    <tr>
+                      <td colspan="6" class="empty">
+                        연결 후 보스 기록이 표시됩니다.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="footnote">
+                저장된 승패 이벤트 기준입니다. 승률은 승리 횟수 ÷ 저장된 결과
+                횟수이며, 완료되지 않은 전투는 제외합니다.
+              </div>
+            </section>
+            <section class="panel narrow">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">RETENTION</p>
+                  <h2>다시 찾아온 플레이어</h2>
+                  <p>최근 유입된 사용자 코호트</p>
+                </div>
+                <span class="panel-symbol">↗</span>
+              </div>
+              <div id="retention" class="placeholder">
+                <span>◌</span>
+                <p>연결 후 재방문율을 보여드려요.</p>
+              </div>
+              <div class="footnote">
+                8일 전부터 35일 전까지 처음 방문한 사용자를 기준으로 합니다.
+                전체 유입·전체 국가 기준이며 광고 필터를 적용하지 않고 1일·7일 후 활동을 봅니다.
+              </div>
+            </section>
+            <section class="panel wide">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">DAILY ACTIVITY</p>
+                  <h2>일별 플레이</h2>
+                  <p>기간별 활성 사용자의 흐름</p>
+                </div>
+                <span class="tag light">일별 활성 사용자</span>
+              </div>
+              <div id="trend" class="placeholder">
+                <span>▥</span>
+                <p>연결 후 일별 추이를 보여드려요.</p>
+              </div>
+              <div class="footnote">
+                일별 사용자 수는 날짜마다 중복될 수 있어 기간 전체 사용자 수와
+                합계가 다릅니다.
+              </div>
+            </section>
+            <section class="panel narrow">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">AUTO HUNT</p>
+                  <h2>자동사냥 중단</h2>
+                  <p>멈춘 이유를 살펴보세요.</p>
+                </div>
+                <span class="panel-symbol">Ⅱ</span>
+              </div>
+              <div id="stops" class="placeholder">
+                <span>◌</span>
+                <p>연결 후 중단 사유를 보여드려요.</p>
+              </div>
+              <div class="footnote">중단 사유별 이벤트 횟수입니다.</div>
+            </section>
+            <section class="panel wide">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">LOOT CHOICES</p>
+                  <h2>보스 보상 선택</h2>
+                  <p>보상 화면에서 장착·판매·보관한 횟수</p>
+                </div>
+                <span class="tag light">아이템 선택</span>
+              </div>
+              <div id="loot" class="placeholder">
+                <span>◇</span>
+                <p>연결 후 보상 선택을 보여드려요.</p>
+              </div>
+              <div class="footnote">
+                보상 화면에서의 선택이며, 이후 가방에서 다시 처리한 내역과는
+                다릅니다.
+              </div>
+            </section>
+            <section class="panel narrow">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">AD REWARDS</p>
+                  <h2>광고 보상 종류</h2>
+                  <p>어떤 보상을 선택했을까요?</p>
+                </div>
+                <span class="panel-symbol">✦</span>
+              </div>
+              <div id="ad-types" class="placeholder">
+                <span>◌</span>
+                <p>연결 후 보상 종류를 보여드려요.</p>
+              </div>
+              <div class="footnote">
+                광고 보상 획득 콜백 기준이며 저장 성공과는 다릅니다.
+              </div>
+            </section>
+            <section class="panel wide">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">PROGRESSION</p>
+                  <h2>강화와 회복약</h2>
+                  <p>저장에 성공한 강화·구매·사용 횟수</p>
+                </div>
+                <span class="tag light">행동 횟수</span>
+              </div>
+              <div id="economy" class="placeholder">
+                <span>✚</span>
+                <p>연결 후 성장 행동을 보여드려요.</p>
+              </div>
+              <div class="footnote">
+                전투 중 사용 후 나중에 저장되는 회복약은 현재 집계하지 않습니다.
+              </div>
+            </section>
+          </div>
+          </div>
+        </div>
+        <footer>
+          V8REDLINE <span>·</span> 게임 운영센터 <span>·</span> 데이터는 Google
+          Analytics에서 직접 불러옵니다. <a href="privacy.html">개인정보 안내</a>
+        </footer>
+      </main>
+    </div>
+    <dialog id="settings">
+      <form method="dialog">
+        <div class="modal-head">
+          <div>
+            <p class="kicker">CONNECTION</p>
+            <h2>연결 설정</h2>
+          </div>
+          <button value="cancel" class="icon-btn" aria-label="닫기">×</button>
+        </div>
+        <p class="modal-copy">
+          Google Cloud에서 만든 웹 애플리케이션 OAuth 클라이언트 ID를
+          입력하세요. 프로젝트의 Google Analytics Data API가 활성화되어 있어야
+          합니다.
+        </p>
+        <label class="field">연결할 게임<select id="settings-game"></select></label>
+        <label class="field"
+          >OAuth 클라이언트 ID<input
+            id="client-id"
+            type="text"
+            autocomplete="off"
+            placeholder="…apps.googleusercontent.com" /></label
+        ><label class="field"
+          >Analytics 속성 ID<input
+            id="property-id"
+            type="text"
+            inputmode="numeric"
+            placeholder="숫자 GA4 속성 ID · 비워두면 연결 해제"
+        /></label>
+        <p class="modal-note">Firebase 프로젝트 이름이 아닌 GA4 숫자 속성 ID를 입력하세요. 또 보스냐의 기본 속성은 561781670입니다. 마초메이드 문서의 후보는 559368796이며 실제 앱 연결을 확인한 뒤 입력하세요.</p>
+        <p id="settings-error" class="form-error" role="alert"></p>
+        <p class="modal-note">
+          연결 설정만 이 브라우저에 저장합니다. 토큰과 보고서는 메모리에서 처리합니다. 로그인 토큰은
+          저장하지 않으며 페이지를 닫으면 사라집니다.
+        </p>
+        <div class="modal-actions">
+          <button value="cancel" class="btn subtle">취소</button
+          ><button id="save-settings" value="default" class="btn primary">
+            설정 저장
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
