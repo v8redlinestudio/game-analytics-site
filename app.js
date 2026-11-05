@@ -5,6 +5,8 @@ const loadedSettings = Core.loadConfig(window.localStorage);
 const reports = new Core.Reports();
 const SCOPE = "openid email https://www.googleapis.com/auth/analytics.readonly";
 const Attribution = window.UBRAttribution;
+const AcquisitionCost = window.AcquisitionCost;
+let acquisitionCostController = null;
 const UnderSpark = window.UnderSparkAnalytics;
 let underSparkController = null;
 const number = new Intl.NumberFormat("ko-KR");
@@ -76,6 +78,7 @@ function updateGameView() {
   $("underspark-detail").hidden = !underspark;
   $("detail-summary").hidden = !game || !selectedProperty();
   $("game-detail").hidden = !ubr;
+  $("paid-acquisition").hidden = !ubr;
   $("common-detail").hidden = !game || !selectedProperty();
   $("portfolio").hidden = Boolean(game);
   $("portfolio-summary").hidden = Boolean(game);
@@ -90,6 +93,7 @@ function updateGameView() {
     game.name + "의 기본 사용자 지표입니다. 게임 전용 이벤트 매핑은 후속 연결이 필요합니다.";
 }
 function selectGame(id) {
+  if (id !== state.gameId) acquisitionCostController?.clear();
   if (id !== state.gameId) underSparkController?.clear();
   state.gameId = id;
   $("game-select").value = id;
@@ -330,6 +334,10 @@ async function loadAcquisition() {
   body.dimensionFilter = combine(body.dimensionFilter, commonFilter());
   const data = await api("runReport", body);
   if (generation !== state.generation || !state.token) return;
+  if (acquisitionCostController) {
+    const r=reportRange(),resolve=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)?v:Attribution.dateDaysAgo(v==="yesterday"?1:v==="today"?0:Number(v.replace("daysAgo","")),state.reportTimeZone);
+    acquisitionCostController.setCohort(data,{start:resolve(r.startDate),end:resolve(r.endDate),timeZone:state.reportTimeZone,filtered:Boolean($("country").value||$("platform").value||$("app-version").value.trim()||$("campaign").value||$("ad").value)});
+  }
   const all = Attribution.aggregate(data);
   options("campaign", all.map(row => row.ids[1]), "전체 캠페인");
   options("ad", all.filter(row => !$("campaign").value || row.ids[1] === $("campaign").value).map(row => row.ids[3]), "전체 광고");
@@ -593,6 +601,7 @@ async function refresh() {
     return;
   }
   let range;
+  acquisitionCostController?.loading();
   try { range = selectedRanges(); } catch(error) {
     if (selectedGame()?.profile === "underspark") underSparkController?.loading();
     state.controller?.abort(); state.generation++; state.insights.clear(); state.insights.add(error.message); showInsights();
@@ -666,6 +675,7 @@ async function refresh() {
     notify(errorText(error));
   } finally {
     if (generation === state.generation) {
+      if (selectedGame()?.profile === "ubr") acquisitionCostController?.render();
       showInsights();
       $("refresh-btn").disabled = false;
       $("status-dot").classList.remove("loading");
@@ -740,6 +750,7 @@ function connect() {
   client.requestAccessToken();
 }
 function disconnect() {
+  acquisitionCostController?.clear();
   underSparkController?.clear();
   state.authGeneration++;
   state.authController?.abort();
@@ -844,6 +855,10 @@ $("save-settings").addEventListener("click", (event) => {
     event.preventDefault();
     $("settings-error").textContent = error.message || "설정을 저장하지 못했습니다.";
   }
+});
+if (AcquisitionCost) acquisitionCostController = AcquisitionCost.createController({document,
+  active:()=>Boolean(state.token)&&selectedGame()?.profile==="ubr",version:()=>state.generation,timeZone:()=>state.reportTimeZone,
+  range:zone=>{const r=reportRange(),resolve=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)?v:Attribution.dateDaysAgo(v==="yesterday"?1:v==="today"?0:Number(v.replace("daysAgo","")),zone);return {startDate:resolve(r.startDate),endDate:resolve(r.endDate)};}
 });
 updateGameView();
 if (loadedSettings.error) notify(loadedSettings.error);

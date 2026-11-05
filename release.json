@@ -1,15 +1,23 @@
 {
-  "source_repository": "rivergameforge-cell/ProjectManager",
-  "source_commit": "08c210f5a96bc8b278c78c9d72a4d57f1870a45b",
-  "files": {
-    "index.html": "85f62a79e68336e2d7893a5db72a0331f0699efaa1d94dabc4aee71f51ce2816",
-    "app.js": "268ff62323cb10f0529de471911dec4d0b6d31f74d9d7e3031e65a76042ed76b",
+  "sourceRepository": "rivergameforge-cell/ProjectManager",
+  "sourceCommit": "c8087de60078d09240c5fb608b25d1cc34a215d7",
+  "publishedAt": "2026-11-05T03:28:24.498300+00:00",
+  "sha256": {
+    "index.html": "8c204336595faf9ddc4b8dbdcc5969beb7730bdd92595209afc00d864c786dcd",
+    "app.js": "4f4734ecc71a8b96e3229b454f7cd0d18f9e9cafa577a6e5e10ba086b061de6b",
     "core.js": "068b0419ac1870c30f07162b04b8eb6cdd56a37e9154ac5595d0bfee55f9adb6",
-    "underspark.js": "7a1821143bd22d1d2c09f06a84eb3bf52322562bb1894c37e03b9cf3be852367",
     "attribution.js": "c77ac5f46d48475403a0f590744c446a3148560ee035ae97958804d73c692363",
-    "styles.css": "806a2bc04a07a68b34415875391f967b7beaf81081aa0f99fe737fbe685b53ff",
-    "privacy.html": "5a1f7deb493022c0a2c9f75f724956b11d38ef651269375e0b19086c9b3cf666",
+    "acquisition-cost.js": "a75fc4b48d62f42d64c7bf7e99c5e00d587a4b3af23fdbabaa5709f813f21cfb",
+    "underspark.js": "7a1821143bd22d1d2c09f06a84eb3bf52322562bb1894c37e03b9cf3be852367",
+    "styles.css": "f7c7a801a620a254d85d45380238b43cdfcd68e3b7befb37f76d2abbfd3e8af3",
+    "privacy.html": "60548cf50c123568c0949c38c429a2d884b20ff20414d491e347f1a9be9f286a",
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
-  "oauth_origin": "https://v8redlinestudio.github.io"
+  "dataIncluded": false,
+  "verification": {
+    "localNode": 47,
+    "http": 1,
+    "browser": "synthetic CSV + 390px layout passed",
+    "metaLive": "blocked by human verification; no report data published"
+  }
 }
