@@ -1,13 +1,15 @@
 {
   "source_repository": "rivergameforge-cell/ProjectManager",
-  "source_commit": "a465928fdd515eaedbbcfc8aedd2bc008410b864",
+  "source_commit": "08c210f5a96bc8b278c78c9d72a4d57f1870a45b",
   "files": {
-    "index.html": "5147ec774eff7148378b5c244da637ddf19a77a81d290815ba03541495aed1c5",
-    "app.js": "43d9032fe38f9b5315cb18ffcc785a752db5d8581a9718b2496320388a34080a",
-    "core.js": "d00aa62f5728fbf0ec4cf5b1af95a1ff68612b3de40607ac44f41763f65efee6",
+    "index.html": "85f62a79e68336e2d7893a5db72a0331f0699efaa1d94dabc4aee71f51ce2816",
+    "app.js": "268ff62323cb10f0529de471911dec4d0b6d31f74d9d7e3031e65a76042ed76b",
+    "core.js": "068b0419ac1870c30f07162b04b8eb6cdd56a37e9154ac5595d0bfee55f9adb6",
+    "underspark.js": "7a1821143bd22d1d2c09f06a84eb3bf52322562bb1894c37e03b9cf3be852367",
     "attribution.js": "c77ac5f46d48475403a0f590744c446a3148560ee035ae97958804d73c692363",
     "styles.css": "806a2bc04a07a68b34415875391f967b7beaf81081aa0f99fe737fbe685b53ff",
-    "privacy.html": "26b31a959bcaa6cc48e0f6b81b9de9589b5ef47b8e26e73aac596e198b6fca97",
+    "privacy.html": "5a1f7deb493022c0a2c9f75f724956b11d38ef651269375e0b19086c9b3cf666",
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-  }
+  },
+  "oauth_origin": "https://v8redlinestudio.github.io"
 }

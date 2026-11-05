@@ -11,9 +11,10 @@
     <title>V8REDLINE · 게임 운영센터</title>
     <link rel="stylesheet" href="styles.css?v=806a2bc04a07" />
     <script defer src="https://accounts.google.com/gsi/client"></script>
-    <script defer src="core.js?v=d00aa62f5728"></script>
+    <script defer src="core.js?v=068b0419ac18"></script>
     <script defer src="attribution.js?v=c77ac5f46d48"></script>
-    <script defer src="app.js?v=43d9032fe38f"></script>
+    <script defer src="underspark.js?v=7a1821143bd2"></script>
+    <script defer src="app.js?v=268ff62323cb"></script>
   </head>
   <body>
     <div class="shell">
@@ -186,6 +187,27 @@
               </div>
             </section>
           </div>
+          <section id="underspark-detail" hidden aria-label="UnderSpark 전용 지표">
+            <div class="panel-head"><div><p class="kicker">UNDERSPARK</p><h2>교습·회로·전투</h2><p>기존 이벤트의 관측 건수 · 개인별 순차 퍼널과 구분합니다.</p></div><label>데이터 환경<select id="us-mode"><option value="production">운영만 · 테스트 제외</option><option value="test">시험만</option></select></label></div>
+            <p id="us-status" class="quality-note" role="status">연결 후 조회합니다.</p>
+            <p class="panel-note">기본 사용자·GA4 매출·일별 추이는 사용자 환경 분류, 전용 이벤트는 사건 발생 시점의 환경 분류를 적용합니다. 누락 분류는 포함하지 않습니다. 이벤트 건수와 고유 이용자 수·시작 대비 완료율은 서로 다른 지표입니다.</p>
+            <div class="grid">
+              <section class="panel"><h3>교습별 진행</h3><div id="us-lessons"></div><p class="panel-note">시작·완료·실패 이벤트 건수입니다. 반복 시작을 개인별 전환율로 계산하지 않습니다.</p></section>
+              <section class="panel"><h3>첫 회로·공격·클리어</h3><div id="us-circuits"></div><p class="panel-note">각 사건의 관측 건수입니다. 단계 간 동일 이용자/시도의 순차 도달을 보장하지 않습니다.</p></section>
+              <section class="panel wide"><h3>스테이지별 전투 결과</h3><div id="us-battles"></div><p class="panel-note">승률 = 승리 ÷ (승리 + 패배). 중단·실행 실패는 별도이며 분모에서 제외합니다. 도움 사용 여부를 분리하고 집계 제한·미분류 결과가 있으면 승률을 보류합니다.</p></section>
+              <section class="panel"><h3>스킬 최초 준비·사용</h3><div id="us-skills"></div><p class="panel-note">전투별 최초 준비·최초 사용 이벤트입니다. 전체 사용 횟수는 아래 서버 전투 요약을 확인하세요.</p></section>
+            </div>
+            <section class="panel"><div class="panel-head"><div><h2>서버 확정·관측 집계</h2><p>기존 유한 내보내기로 만든 집계 JSON을 이 브라우저에서 확인합니다.</p></div><button id="us-clear-import" class="btn subtle">불러온 자료 해제</button></div>
+              <label class="field">서버 집계 JSON 선택<input type="file" id="us-import" accept="application/json,.json"></label>
+              <p id="us-import-status" class="quality-note" role="status"></p>
+              <p class="panel-note">원본 계정·주문·영수증 파일은 받지 않습니다. 전용 변환기로 만든 식별자 없는 집계만 허용합니다. 파일은 전송·영구 저장하지 않으며 연결 해제/게임 변경/30분 경과 시 지웁니다. 기간 필터만 KST로 적용하며 위 국가·플랫폼·앱 버전 필터는 적용하지 않습니다. 원본 정정·삭제는 파일에 자동 반영되지 않으므로 최신 자료를 다시 선택하세요.</p>
+              <h3>광고 단계·보상 확정</h3><p id="us-behavior-range" class="panel-note"></p><div id="us-ads"></div>
+              <h3>광고 수익 · SDK 관측</h3><div id="us-ad-money"></div><p class="panel-note">통화별 원 단위를 유지합니다. GA4 광고 매출과 합산하지 않으며 AdMob 정산 대조 전입니다.</p>
+              <h3>공명 단계·스킬 사용 분포</h3><div id="us-circuit-details"></div>
+              <h3>구매·환불·회수 관측</h3><p id="us-commerce-range" class="panel-note"></p><div id="us-finance"></div>
+              <p class="panel-note">스토어 검증 결제액과 운영자 환불 원본 반입을 구분합니다. 고객 결제액·세액 기준을 유지하며 전체 환불 범위를 대조하지 않은 순매출·개발자 실수령액은 계산하지 않습니다. 구매 복원은 새 매출이 아니며 회수 재화는 현금 환불액이 아닙니다.</p>
+            </section>
+          </section>
           <div id="game-detail" hidden>
           <section class="panel acquisition-panel" id="acquisition-report">
             <div class="panel-head"><div><p class="kicker">META ACQUISITION</p><h2>광고별 설치와 게임 진행</h2><p>선택 기간에 처음 유입된 사용자를 광고별로 비교합니다.</p></div><span class="pill">사용자 수</span></div>

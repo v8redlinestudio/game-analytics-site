@@ -5,6 +5,8 @@ const loadedSettings = Core.loadConfig(window.localStorage);
 const reports = new Core.Reports();
 const SCOPE = "openid email https://www.googleapis.com/auth/analytics.readonly";
 const Attribution = window.UBRAttribution;
+const UnderSpark = window.UnderSparkAnalytics;
+let underSparkController = null;
 const number = new Intl.NumberFormat("ko-KR");
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -70,6 +72,8 @@ function updateGameView() {
   const game = selectedGame();
   $("page-heading").textContent = game ? game.name + " · 플레이 리포트" : "전체 게임 현황";
   const ubr = game?.profile === "ubr" && Boolean(selectedProperty());
+  const underspark = game?.profile === "underspark" && Boolean(selectedProperty());
+  $("underspark-detail").hidden = !underspark;
   $("detail-summary").hidden = !game || !selectedProperty();
   $("game-detail").hidden = !ubr;
   $("common-detail").hidden = !game || !selectedProperty();
@@ -81,10 +85,12 @@ function updateGameView() {
   for (const id of ["boss-attempts", "rewards-earned"]) $(id).closest("article").hidden = !ubr;
   $("selected-note").textContent = !game ? "게임을 선택하면 상세 분석이 열립니다." :
     !selectedProperty() ? game.name + "의 GA4 속성을 연결해 주세요." : ubr ?
-    "또 보스냐의 기존 이벤트 계약으로 보스·광고·성장·유입을 분석합니다." :
+    "또 보스냐의 기존 이벤트 계약으로 보스·광고·성장·유입을 분석합니다." : underspark ?
+    "UnderSpark 교습·전투는 GA4, 광고 지급·금액은 서버 집계 파일로 원천을 구분합니다. 기본값은 테스트 제외입니다." :
     game.name + "의 기본 사용자 지표입니다. 게임 전용 이벤트 매핑은 후속 연결이 필요합니다.";
 }
 function selectGame(id) {
+  if (id !== state.gameId) underSparkController?.clear();
   state.gameId = id;
   $("game-select").value = id;
   for (const field of ["acquisition", "campaign", "ad"]) $(field).value = "";
@@ -172,8 +178,8 @@ function commonFilter() {
     $("platform").value ? {filter:{fieldName:"platform",stringFilter:{matchType:"EXACT",value:$("platform").value}}} : undefined,
     $("app-version").value.trim() ? {filter:{fieldName:"appVersion",stringFilter:{matchType:"EXACT",value:$("app-version").value.trim()}}} : undefined);
 }
-function reportFilter() {
-  return combine(commonFilter(), Attribution.audienceFilter({
+function reportFilter(includeUnderSparkMode = true) {
+  return combine(commonFilter(), includeUnderSparkMode && selectedGame()?.profile === "underspark" ? UnderSpark.audienceFilter(underSparkController?.mode()) : undefined, Attribution.audienceFilter({
     country: $("country").value,
     meta: $("acquisition").value === "meta",
     campaign: $("campaign").value,
@@ -502,6 +508,10 @@ function propertyDateDaysAgo(days, now = new Date()) {
   return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - days)).toISOString().slice(0, 10);
 }
 async function loadRetention() {
+  if (selectedGame()?.profile === "underspark") {
+    message("retention", "환경을 분리한 성숙 코호트 대조는 별도 검증 대상입니다. 전체 환경의 기존 재방문 수치로 대체하지 않습니다.");
+    return;
+  }
   requireTimeZone();
   const body = {
     dimensions: [{ name: "cohort" }, { name: "cohortNthDay" }],
@@ -546,7 +556,7 @@ async function loadPortfolio(generation) {
     if (generation !== state.generation) return;
     const row = [...table.children].find(n => n.dataset.game === game.id); row.children[1].textContent = "불러오는 중…";
     try {
-      const filter = combine(commonFilter(), Attribution.audienceFilter({country:$("country").value}));
+      const filter = combine(commonFilter(), game.profile === "underspark" ? UnderSpark.audienceFilter("production") : undefined, Attribution.audienceFilter({country:$("country").value}));
       const data = await reports.request(propertyId,"runReport",summaryBody(filter),"v1beta",state.controller.signal);
       if (generation !== state.generation) return;
       const report = Core.summary(data), current = report.current;
@@ -584,6 +594,7 @@ async function refresh() {
   }
   let range;
   try { range = selectedRanges(); } catch(error) {
+    if (selectedGame()?.profile === "underspark") underSparkController?.loading();
     state.controller?.abort(); state.generation++; state.insights.clear(); state.insights.add(error.message); showInsights();
     for (const id of ["active-users","new-users","ad-revenue","purchase-revenue","boss-attempts","rewards-earned","total-active","total-new","connected-count"]) $(id).textContent = "—";
     for (const id of ["active-change","new-change","ad-change","purchase-change"]) $(id).textContent = "기간 입력 확인";
@@ -597,6 +608,7 @@ async function refresh() {
   state.controller?.abort();
   state.controller = new AbortController();
   const generation = ++state.generation;
+  if (selectedGame()?.profile === "underspark") underSparkController?.loading();
   state.quality.clear(); state.insights.clear(); state.reportTimeZone = null;
   $("insight-list").replaceChildren(elem("li", "조회 결과를 확인하고 있습니다…"));
   $("range-note").textContent = $("period").value === "custom" ? `${range.current.startDate} ~ ${range.current.endDate} · 이전 동일 ${range.days}일과 비교` : `어제까지 ${range.days}일 · 직전 ${range.days}일과 비교 · 각 속성 시간대 기준`;
@@ -643,6 +655,9 @@ async function refresh() {
           }
         }
       }
+    }
+    if (selectedGame()?.profile === "underspark" && underSparkController && generation === state.generation) {
+      errors.push(...await underSparkController.load());
     }
   } catch (error) {
     if (generation !== state.generation) return;
@@ -725,6 +740,7 @@ function connect() {
   client.requestAccessToken();
 }
 function disconnect() {
+  underSparkController?.clear();
   state.authGeneration++;
   state.authController?.abort();
   state.authController = null;
@@ -781,6 +797,11 @@ function disconnect() {
   }
   $("acquisition").value = "";
 }
+if (UnderSpark) underSparkController = UnderSpark.createController({document,
+  active: () => Boolean(state.token) && selectedGame()?.profile === "underspark",
+  version: () => state.generation, range: reportRange, filter: () => reportFilter(false),
+  query: body => api("runReport", body), refresh,
+});
 for (const game of Core.GAMES) {
   for (const id of ["game-select", "settings-game"]) {
     const option = elem("option", game.name);

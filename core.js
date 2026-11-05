@@ -7,7 +7,7 @@
     { id: "unlimitbossrun", name: "또 보스냐!", profile: "ubr", propertyId: "561781670" },
     { id: "dinomagic", name: "다이노매직" },
     { id: "machomade", name: "마초메이드" },
-    { id: "underspark", name: "UnderSpark", propertyId: "560510698" },
+    { id: "underspark", name: "UnderSpark", profile: "underspark", propertyId: "560510698" },
     { id: "forgeline", name: "ForgeLine" },
     { id: "shrimpgrow", name: "ShrimpGrow" },
     { id: "nightscape", name: "야경수호대" },
