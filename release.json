@@ -1,10 +1,10 @@
 {
   "source_repository": "rivergameforge-cell/ProjectManager",
-  "source_commit": "4fd0109cdf8f81407743aee0c1d162df0df1a093",
+  "source_commit": "02d43fd5be80b578ec07d07cf6ea0b0af8161286",
   "files": {
-    "index.html": "be05bef5bcb6c903d3fc5c2d84ff4246bc5252b92631124f7652964e4aead630",
+    "index.html": "5d8a61bc7560a8d946fdec1fd6eafd3890aee1291d4e6d2b7fd1e1db22386eb8",
     "app.js": "4ebee362d369b3df0c5f3f3f3c5df55a6117c8b809ae7dc25e6ee3aeea89af08",
-    "core.js": "04985d9f2e7801738e922e3586574a154e113fa8f2bfafd459b901761a254d60",
+    "core.js": "515b680a295ec6fd05d24210b2611ae257fa45bf08cc62381c6c67773089f477",
     "attribution.js": "56ecf8039d366c857412a17735b73e4addba190c68d6187c9f6f7204626e265d",
     "styles.css": "d8321d02c9e57faab55fcfcd46f8805b43c2d5b015adc8903725f5322bdcf892",
     "privacy.html": "26b31a959bcaa6cc48e0f6b81b9de9589b5ef47b8e26e73aac596e198b6fca97",
