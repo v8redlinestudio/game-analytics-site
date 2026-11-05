@@ -62,9 +62,58 @@
       if (meta.subjectToThresholding) warnings.add("개인정보 보호 임계값 적용");
       if (meta.dataLossFromOtherRow) warnings.add("일부 항목이 기타로 집계됨");
       if (meta.samplingMetadatas?.length) warnings.add("표본 데이터 포함");
+      if (meta.schemaRestrictionResponse?.activeMetricRestrictions?.length) warnings.add("일부 측정항목 접근 제한");
       if (Number(part.rowCount || 0) > (part.rows || []).length) warnings.add("일부 행만 표시됨");
     }
     return [...warnings];
+  }
+
+  const SUMMARY_METRICS = ["activeUsers", "newUsers", "totalAdRevenue", "purchaseRevenue"];
+  function ranges(period, start, end) {
+    if (period !== "custom") {
+      const match = /^(6|27|89)daysAgo$/.exec(period);
+      if (!match) throw new Error("기간을 확인해 주세요.");
+      const days = Number(match[1]) + 1;
+      return { days, current: { startDate: `${days}daysAgo`, endDate: "yesterday", name: "current" },
+        previous: { startDate: `${days * 2}daysAgo`, endDate: `${days + 1}daysAgo`, name: "previous" } };
+    }
+    const parse = value => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) throw new Error("시작일과 종료일을 입력해 주세요.");
+      const time = Date.parse(value + "T00:00:00Z");
+      if (!Number.isFinite(time) || new Date(time).toISOString().slice(0, 10) !== value) throw new Error("날짜를 확인해 주세요.");
+      return time;
+    };
+    const first = parse(start), last = parse(end), days = (last - first) / 86400000 + 1;
+    if (days < 1 || days > 366) throw new Error("기간은 순서대로 최대 366일까지 선택해 주세요.");
+    const date = time => new Date(time).toISOString().slice(0, 10);
+    return { days, current: { startDate: start, endDate: end, name: "current" },
+      previous: { startDate: date(first - days * 86400000), endDate: date(first - 86400000), name: "previous" } };
+  }
+  function summary(data) {
+    const rangeIndex = (data.dimensionHeaders || []).findIndex(h => h.name === "dateRange");
+    const restricted = new Set((data.metadata?.schemaRestrictionResponse?.activeMetricRestrictions || []).map(r => r.metricName));
+    const find = name => (data.rows || []).find(row => rangeIndex >= 0 ? row.dimensionValues?.[rangeIndex]?.value === name : name === "current");
+    const values = row => Object.fromEntries(SUMMARY_METRICS.map((name, fallback) => {
+      const index = data.metricHeaders?.length ? data.metricHeaders.findIndex(h => h.name === name) : fallback;
+      const raw = row?.metricValues?.[index]?.value;
+      return [name, raw !== undefined && raw !== "" && Number.isFinite(Number(raw)) && !restricted.has(name) ? Number(raw) : null];
+    }));
+    return { current: values(find("current")), previous: values(find("previous")),
+      currency: data.metadata?.currencyCode || "", timeZone: data.metadata?.timeZone || "미확인", limited: quality(data).length > 0 };
+  }
+  function change(current, previous, limited = false) {
+    if (limited) return "집계 제한 · 비교 보류";
+    if (current === null || previous === null) return "비교 자료 없음";
+    if (previous === 0) return current === 0 ? "이전 기간과 동일" : "이전 0 · 증감률 미정";
+    const delta = (current - previous) / Math.abs(previous) * 100;
+    return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}% · 이전 기간 대비`;
+  }
+  function adWarnings(counts) {
+    const issues = [];
+    for (const [before, after, label] of [["reward_requested", "reward_shown", "표시가 요청보다 많습니다"], ["reward_shown", "reward_earned", "보상 획득이 표시보다 많습니다"], ["reward_earned", "reward_saved", "보상 저장 결과가 획득보다 많습니다"]]) {
+      if ((counts[after] || 0) > (counts[before] || 0)) issues.push(`광고 계측 확인: ${label}. 기간 경계·지연·중복 또는 이벤트 누락 가능성을 점검하세요. 개별 광고 시도의 오류 확정은 아닙니다.`);
+    }
+    return issues;
   }
 
   class Reports {
@@ -120,7 +169,7 @@
       }
     }
   }
-  const api = { ACCOUNT, CLIENT_ID, STORAGE_KEY, GAMES, config, loadConfig, allowedAccount, quality, Reports };
+  const api = { ACCOUNT, CLIENT_ID, STORAGE_KEY, GAMES, config, loadConfig, allowedAccount, quality, Reports, SUMMARY_METRICS, ranges, summary, change, adWarnings };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.ForgeAnalytics = Object.freeze(api);
 })(typeof window !== "undefined" ? window : globalThis);

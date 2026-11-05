@@ -14,7 +14,8 @@ const state = {
   controller: null,
   expiryTimer: null,
   quality: new Set(),
-  reportTimeZone: "UTC",
+  insights: new Set(),
+  reportTimeZone: null,
   config: loadedSettings.config,
   gameId: "all",
   authGeneration: 0,
@@ -71,6 +72,11 @@ function updateGameView() {
   const ubr = game?.profile === "ubr" && Boolean(selectedProperty());
   $("detail-summary").hidden = !game || !selectedProperty();
   $("game-detail").hidden = !ubr;
+  $("common-detail").hidden = !game || !selectedProperty();
+  $("portfolio").hidden = Boolean(game);
+  $("portfolio-summary").hidden = Boolean(game);
+  $("nav-portfolio").classList.toggle("selected", !game);
+  $("nav-detail").classList.toggle("selected", Boolean(game));
   for (const node of document.querySelectorAll("[data-ubr]")) node.hidden = !ubr;
   for (const id of ["boss-attempts", "rewards-earned"]) $(id).closest("article").hidden = !ubr;
   $("selected-note").textContent = !game ? "게임을 선택하면 상세 분석이 열립니다." :
@@ -118,9 +124,10 @@ function message(id, msg, error = false) {
   const node = $(id);
   node.className = "placeholder";
   clearNode(node);
-  node.append(elem("span", error ? "!" : "◌"), elem("p", msg));
+  node.append(elem("span", error ? "!" : "—"), elem("p", msg));
 }
 function errorText(error) {
+  if (error.code === "TIMEZONE_UNKNOWN") return error.message;
   if (error.status === 401) return "인증이 만료되었습니다. 다시 연결해 주세요.";
   if (error.status === 403)
     return "API 사용 설정 또는 이 계정의 Analytics 접근 권한을 확인해 주세요.";
@@ -130,6 +137,9 @@ function errorText(error) {
   return "이 항목을 불러오지 못했습니다. API 설정과 맞춤 측정항목을 확인해 주세요.";
 }
 function setLoading() {
+  $("trend-table").replaceChildren();
+  for (const id of ["active-change","new-change","ad-change","purchase-change"]) $(id).textContent = "확인 중";
+  for (const id of ["ad-revenue","purchase-revenue","total-active","total-new","connected-count"]) $(id).textContent = "—";
   for (const id of [
     "active-users",
     "new-users",
@@ -157,13 +167,18 @@ function setLoading() {
   table.append(tr);
   acquisitionMessage("데이터를 불러오는 중입니다.");
 }
+function commonFilter() {
+  return combine(
+    $("platform").value ? {filter:{fieldName:"platform",stringFilter:{matchType:"EXACT",value:$("platform").value}}} : undefined,
+    $("app-version").value.trim() ? {filter:{fieldName:"appVersion",stringFilter:{matchType:"EXACT",value:$("app-version").value.trim()}}} : undefined);
+}
 function reportFilter() {
-  return Attribution.audienceFilter({
+  return combine(commonFilter(), Attribution.audienceFilter({
     country: $("country").value,
     meta: $("acquisition").value === "meta",
     campaign: $("campaign").value,
     ad: $("ad").value,
-  });
+  }));
 }
 function eventFilter(names) {
   return {
@@ -178,9 +193,30 @@ function combine(...filters) {
       ? { andGroup: { expressions: valid } }
       : undefined;
 }
+function selectedRanges() { return Core.ranges($("period").value, $("start-date").value, $("end-date").value); }
+function reportRange() { const {startDate,endDate} = selectedRanges().current; return {startDate,endDate}; }
+function summaryBody(filter) {
+  const range = selectedRanges(), body = requestBody([], Core.SUMMARY_METRICS, filter);
+  body.dateRanges = [range.current, range.previous];
+  return body;
+}
+function money(value, currency) {
+  if (value === null) return "—";
+  if (!/^[A-Z]{3}$/.test(currency)) return number.format(value) + " · 통화 미확인";
+  return new Intl.NumberFormat("ko-KR", {style:"currency",currency}).format(value);
+}
+function showInsights() {
+  const list = $("insight-list"); list.replaceChildren();
+  if (!state.insights.size) list.append(elem("li", "현재 조회 범위에서 감지된 계측 이상은 없습니다. 수집·원장 정합성 검증을 대신하지 않습니다."));
+  for (const text of state.insights) list.append(elem("li", text));
+}
+function metricCell(cell, current, previous, limited) {
+  cell.textContent = current === null ? "—" : number.format(current);
+  cell.append(elem("small", Core.change(current, previous, limited), "metric-change"));
+}
 function requestBody(dimensions, metrics, filters) {
   const body = {
-    dateRanges: [{ startDate: $("period").value, endDate: "today" }],
+    dateRanges: [reportRange()],
     dimensions: dimensions.map((name) => ({ name })),
     metrics: metrics.map((name) => ({ name })),
     limit: "10000",
@@ -276,11 +312,17 @@ function options(id, values, label) {
   }
   $(id).value = selected;
 }
+function requireTimeZone() {
+  if (!state.reportTimeZone) { const error = new Error("속성 시간대 수신 후 코호트를 조회할 수 있습니다."); error.code = "TIMEZONE_UNKNOWN"; throw error; }
+}
 async function loadAcquisition() {
+  requireTimeZone();
   const generation = state.generation;
-  const data = await api("runReport", Attribution.acquisitionBody({
-    period: $("period").value, country: $("country").value, timeZone: state.reportTimeZone,
-  }));
+  const body = Attribution.acquisitionBody({
+    period: $("period").value, dateRange: reportRange(), country: $("country").value, timeZone: state.reportTimeZone,
+  });
+  body.dimensionFilter = combine(body.dimensionFilter, commonFilter());
+  const data = await api("runReport", body);
   if (generation !== state.generation || !state.token) return;
   const all = Attribution.aggregate(data);
   options("campaign", all.map(row => row.ids[1]), "전체 캠페인");
@@ -300,14 +342,16 @@ async function loadAcquisition() {
   }
 }
 async function loadSummary() {
-  const d = await api(
-    "runReport",
-    requestBody([], ["activeUsers", "newUsers"], reportFilter()),
-  );
-  state.reportTimeZone = d.metadata?.timeZone || "UTC";
-  const r = rows(d);
-  $("active-users").textContent = r.length ? number.format(r[0].m[0]) : "—";
-  $("new-users").textContent = r.length ? number.format(r[0].m[1]) : "—";
+  const data = await api("runReport", summaryBody(reportFilter()));
+  const summary = Core.summary(data);
+  state.reportTimeZone = data.metadata?.timeZone || null;
+  for (const [id, metric, changeId] of [["active-users","activeUsers","active-change"],["new-users","newUsers","new-change"],["ad-revenue","totalAdRevenue","ad-change"],["purchase-revenue","purchaseRevenue","purchase-change"]]) {
+    const current = summary.current[metric];
+    $(id).textContent = metric.endsWith("Revenue") ? money(current, summary.currency) : current === null ? "—" : number.format(current);
+    $(changeId).textContent = Core.change(current, summary.previous[metric], summary.limited);
+  }
+  $("range-note").textContent += " · 속성 시간대 " + summary.timeZone;
+  if (summary.current.activeUsers === null) state.insights.add("선택한 게임의 보고서 데이터가 없습니다. 미수신·처리 지연·필터 결과를 확인하세요.");
 }
 async function loadEvents() {
   const names = [
@@ -329,11 +373,12 @@ async function loadEvents() {
   const r = rows(d),
     counts = Object.fromEntries(r.map((x) => [x.d[0], x.m[0]]));
   $("boss-attempts").textContent = r.length
-    ? number.format(counts.boss_started || 0)
+    ? counts.boss_started === undefined ? "미수신" : number.format(counts.boss_started)
     : "—";
   $("rewards-earned").textContent = r.length
-    ? number.format(counts.reward_earned || 0)
+    ? counts.reward_earned === undefined ? "미수신" : number.format(counts.reward_earned)
     : "—";
+  for (const warning of Core.adWarnings(counts)) state.insights.add(warning);
   renderList(
     "ads-list",
     r.length
@@ -343,13 +388,13 @@ async function loadEvents() {
           ["보상 획득", "reward_earned"],
           ["보상 저장 결과", "reward_saved"],
           ["실패", "reward_failed"],
-        ].map(([label, key]) => ({ label, value: counts[key] || 0 }))
+        ].map(([label, key]) => ({ label, display: counts[key] === undefined ? "미수신" : number.format(counts[key]) }))
       : [],
   );
 }
 async function loadFunnel() {
   const body = {
-    dateRanges: [{ startDate: $("period").value, endDate: "today" }],
+    dateRanges: [reportRange()],
     funnel: {
       isOpenFunnel: false,
       steps: funnelSteps.map(([name, eventName]) => ({
@@ -362,15 +407,13 @@ async function loadFunnel() {
   if (country) body.dimensionFilter = country;
   const data = await api("runFunnelReport", body, "v1alpha");
   const r = rows(data.funnelVisualization || {});
+  if (!r.length) { message("funnel", "선택한 기간에 퍼널 데이터가 없습니다."); return; }
   const first = r[0]?.m[0] || 0;
-  renderBars(
-    "funnel",
-    r.map((x) => ({
-      label: x.d[0].replace(/^\d+\.\s*/, ""),
-      value: x.m[0],
-      display: `${number.format(x.m[0])}명 · ${pct(x.m[0], first)}`,
-    })),
-  );
+  renderBars("funnel", r.map(x => ({ label: x.d[0].replace(/^\d+\.\s*/, ""), value: x.m[0], display: `${number.format(x.m[0])}명 · ${pct(x.m[0], first)}` })));
+  if (r.length < funnelSteps.length) {
+    $("funnel").append(elem("p", "일부 단계가 응답에 없습니다. 0명으로 단정하지 않고 수신·집계 상태를 확인하세요.", "panel-note"));
+    state.insights.add("퍼널 일부 단계가 응답에 없습니다. 실제 미도달과 계측 누락을 구분해 확인하세요.");
+  }
 }
 async function loadBoss() {
   const d = await api(
@@ -435,23 +478,20 @@ async function loadCategorized(id, eventName) {
 async function loadTrend() {
   const body = requestBody(["date"], ["activeUsers"], reportFilter());
   body.orderBys = [{ dimension: { dimensionName: "date" } }];
-  const d = await api("runReport", body);
-  const r = rows(d);
-  if (!r.length) {
-    message("trend", "선택한 기간에 데이터가 없습니다.");
-    return;
-  }
-  const n = $("trend");
-  n.className = "trend";
-  clearNode(n);
-  const max = Math.max(...r.map((x) => x.m[0]), 1);
+  const data = await api("runReport", body), r = rows(data), table = $("trend-table");
+  table.replaceChildren();
+  if (!r.length) { message("trend", "선택한 기간에 데이터가 없습니다."); return; }
+  const node = $("trend"); node.className = "daily-bars"; node.replaceChildren();
+  const max = Math.max(...r.map(x => x.m[0]), 1);
   for (const x of r) {
-    const bar = elem("div", undefined, "trend-bar");
-    bar.style.height = `${Math.max(2, (x.m[0] / max) * 100)}%`;
-    bar.title = `${x.d[0]} · ${number.format(x.m[0])}명`;
-    n.append(bar);
+    const date = x.d[0].replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3");
+    const bar = elem("div", undefined, "daily-column"), track = elem("div", undefined, "daily-track"), fill = elem("div", undefined, "daily-fill");
+    fill.style.height = `${Math.max(1, x.m[0] / max * 100)}%`; track.append(fill);
+    bar.append(elem("b", number.format(x.m[0])), track, elem("span", date.slice(5))); node.append(bar);
+    const tr = elem("tr"); tr.append(elem("td", date), elem("td", number.format(x.m[0]))); table.append(tr);
   }
 }
+
 function propertyDateDaysAgo(days, now = new Date()) {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
@@ -462,6 +502,7 @@ function propertyDateDaysAgo(days, now = new Date()) {
   return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - days)).toISOString().slice(0, 10);
 }
 async function loadRetention() {
+  requireTimeZone();
   const body = {
     dimensions: [{ name: "cohort" }, { name: "cohortNthDay" }],
     metrics: [{ name: "cohortActiveUsers" }, { name: "cohortTotalUsers" }],
@@ -492,65 +533,73 @@ async function loadRetention() {
   renderList("retention", items, "retention-row");
 }
 async function loadPortfolio(generation) {
-  const table = $("portfolio-body");
-  table.replaceChildren();
-  let connected = 0;
-  let failed = 0;
+  const table = $("portfolio-body"); table.replaceChildren();
+  let connected = 0, failed = 0, activeTotal = 0, newTotal = 0, activeMeasured = 0, newMeasured = 0;
   for (const game of Core.GAMES) {
-    const row = elem("tr");
-    const status = elem("td", state.config.bindings[game.id] ? "조회 대기" : "연결 필요");
-    const active = elem("td", "—");
-    const fresh = elem("td", "—");
-    const zone = elem("td", "—");
-    const checked = elem("td", "—");
-    const action = elem("td");
-    const button = elem("button", state.config.bindings[game.id] ? "상세 보기" : "연결", "text-btn");
-    button.addEventListener("click", () => state.config.bindings[game.id] ? selectGame(game.id) : openSettings(game.id));
-    action.append(button);
-    row.append(elem("td", game.name), status, active, fresh, zone, checked, action);
-    table.append(row);
-    row.dataset.game = game.id;
+    const row = elem("tr"); row.dataset.game = game.id;
+    for (const text of [game.name,state.config.bindings[game.id] ? "조회 대기" : "연결 필요","—","—","—","—","—","—"]) row.append(elem("td",text));
+    const action = elem("td"), button = elem("button", state.config.bindings[game.id] ? "상세 보기" : "연결", "text-btn");
+    button.addEventListener("click", () => state.config.bindings[game.id] ? selectGame(game.id) : openSettings(game.id)); action.append(button); row.append(action); table.append(row);
   }
-  // Keep requests sequential to respect each property's quotas and allow partial results.
   for (const game of Core.GAMES) {
-    const propertyId = state.config.bindings[game.id];
-    if (!propertyId) continue;
+    const propertyId = state.config.bindings[game.id]; if (!propertyId) continue;
     if (generation !== state.generation) return;
-    const row = [...table.children].find(node => node.dataset.game === game.id);
-    row.children[1].textContent = "불러오는 중…";
+    const row = [...table.children].find(n => n.dataset.game === game.id); row.children[1].textContent = "불러오는 중…";
     try {
-      const countryFilter = Attribution.audienceFilter({ country: $("country").value });
-      const data = await reports.request(propertyId, "runReport", requestBody([], ["activeUsers", "newUsers"], countryFilter), "v1beta", state.controller.signal);
+      const filter = combine(commonFilter(), Attribution.audienceFilter({country:$("country").value}));
+      const data = await reports.request(propertyId,"runReport",summaryBody(filter),"v1beta",state.controller.signal);
       if (generation !== state.generation) return;
-      const record = rows(data)[0];
-      const warnings = Core.quality(data);
-      row.children[1].textContent = warnings.length ? "집계 제한" : record ? "정상" : "데이터 없음";
-      row.children[2].textContent = record ? number.format(record.m[0]) : "—";
-      row.children[3].textContent = record ? number.format(record.m[1]) : "—";
-      row.children[4].textContent = data.metadata?.timeZone || "미확인";
-      row.children[5].textContent = new Date().toLocaleTimeString("ko-KR") + (warnings.length ? " · " + warnings.join(" · ") : "");
-      connected++;
-    } catch (error) {
+      const report = Core.summary(data), current = report.current;
+      for (const warning of Core.quality(data)) state.quality.add(game.name + ": " + warning);
+      row.children[1].textContent = report.limited ? "집계 제한" : current.activeUsers !== null ? "정상" : "데이터 없음";
+      metricCell(row.children[2],current.activeUsers,report.previous.activeUsers,report.limited);
+      metricCell(row.children[3],current.newUsers,report.previous.newUsers,report.limited);
+      row.children[4].textContent = money(current.totalAdRevenue,report.currency);
+      row.children[5].textContent = money(current.purchaseRevenue,report.currency);
+      row.children[6].textContent = report.timeZone; row.children[7].textContent = new Date().toLocaleTimeString("ko-KR"); connected++;
+      if (current.activeUsers !== null) { activeTotal += current.activeUsers; activeMeasured++; }
+      if (current.newUsers !== null) { newTotal += current.newUsers; newMeasured++; }
+      if (report.limited) state.insights.add(game.name + ": 집계/권한 제한이 있습니다. 비교 시 유의하세요.");
+    } catch(error) {
       if (generation !== state.generation) return;
       if (error.status === 401) throw error;
-      failed++;
-      row.children[1].textContent = error.status === 403 ? "권한 없음" : error.status === 429 ? "조회 한도 도달" : "조회 실패";
-      row.children[5].textContent = errorText(error);
+      failed++; row.children[1].textContent = error.status === 403 ? "권한 없음" : error.status === 429 ? "조회 한도 도달" : "조회 실패";
+      row.children[7].textContent = errorText(error); state.insights.add(game.name + ": " + errorText(error));
     }
   }
+  const missing = Core.GAMES.filter(g => !state.config.bindings[g.id]).length;
+  if (missing) state.insights.add(`${missing}개 게임은 아직 속성이 연결되지 않았습니다. 아래 연결 버튼에서 관리하세요.`);
   $("portfolio-count").textContent = `${connected}개 조회 / ${Core.GAMES.length}개 게임`;
+  $("connected-count").textContent = `${connected} / ${Core.GAMES.length}`;
+  $("total-active").textContent = activeMeasured ? number.format(activeTotal) : "—";
+  $("total-new").textContent = newMeasured ? number.format(newTotal) : "—";
   return failed;
 }
+
 async function refresh() {
   if (!state.token || Date.now() >= state.expiry) {
     disconnect();
     notify("Google 연결이 만료되었습니다. 다시 연결해 주세요.");
     return;
   }
+  let range;
+  try { range = selectedRanges(); } catch(error) {
+    state.controller?.abort(); state.generation++; state.insights.clear(); state.insights.add(error.message); showInsights();
+    for (const id of ["active-users","new-users","ad-revenue","purchase-revenue","boss-attempts","rewards-earned","total-active","total-new","connected-count"]) $(id).textContent = "—";
+    for (const id of ["active-change","new-change","ad-change","purchase-change"]) $(id).textContent = "기간 입력 확인";
+    for (const id of ["trend","retention","funnel","ads-list","stops","loot","ad-types","economy"]) message(id,error.message);
+    $("trend-table").replaceChildren(); $("portfolio-body").replaceChildren(); $("portfolio-count").textContent = "기간 입력 확인";
+    showTableMessage(error.message); acquisitionMessage(error.message);
+    $("range-note").textContent = "조회하지 않았습니다 · " + error.message;
+    $("status-dot").classList.remove("loading"); $("private-content").setAttribute("aria-busy","false"); $("refresh-btn").disabled = false;
+    setStatus("기간 입력 확인"); return;
+  }
   state.controller?.abort();
   state.controller = new AbortController();
   const generation = ++state.generation;
-  state.quality.clear();
+  state.quality.clear(); state.insights.clear(); state.reportTimeZone = null;
+  $("insight-list").replaceChildren(elem("li", "조회 결과를 확인하고 있습니다…"));
+  $("range-note").textContent = $("period").value === "custom" ? `${range.current.startDate} ~ ${range.current.endDate} · 이전 동일 ${range.days}일과 비교` : `어제까지 ${range.days}일 · 직전 ${range.days}일과 비교 · 각 속성 시간대 기준`;
   $("quality-note").classList.add("hidden");
   $("private-content").hidden = false;
   document.body.classList.add("analytics-visible");
@@ -563,16 +612,16 @@ async function refresh() {
   $("refresh-btn").disabled = true;
   const errors = [];
   try {
-    const portfolioFailures = await loadPortfolio(generation);
+    const portfolioFailures = state.gameId === "all" ? await loadPortfolio(generation) : 0;
     if (portfolioFailures) errors.push("게임 연결");
     if (generation !== state.generation) return;
     if (selectedProperty()) {
-      const tasks = [["요약", loadSummary, null]];
+      const tasks = [["요약", loadSummary, null],["일별 플레이",loadTrend,"trend"],["재방문",loadRetention,"retention"]];
       if (selectedGame()?.profile === "ubr") tasks.push(
         ["광고별 유입", loadAcquisition, "acquisition-table"],
         ["광고", loadEvents, "ads-list"], ["퍼널", loadFunnel, "funnel"],
         ["보스", loadBoss, "boss-table"], ["중단 사유", loadStops, "stops"],
-        ["일별 플레이", loadTrend, "trend"], ["재방문", loadRetention, "retention"],
+
         ["보상 선택", () => loadCategorized("loot", "boss_loot_action"), "loot"],
         ["광고 종류", () => loadCategorized("ad-types", "reward_earned"), "ad-types"],
         ["성장 행동", () => loadCategorized("economy", "economy_action"), "economy"],
@@ -583,7 +632,7 @@ async function refresh() {
         catch (error) {
           if (generation !== state.generation) return;
           if (error.status === 401) throw error;
-          errors.push(name);
+          errors.push(name); state.insights.add(name + ": " + errorText(error));
           if (name === "요약") $("selected-note").textContent = errorText(error);
           else if (target === "acquisition-table") acquisitionMessage(errorText(error));
           else if (target === "boss-table") showTableMessage(errorText(error));
@@ -602,6 +651,7 @@ async function refresh() {
     notify(errorText(error));
   } finally {
     if (generation === state.generation) {
+      showInsights();
       $("refresh-btn").disabled = false;
       $("status-dot").classList.remove("loading");
       $("private-content").setAttribute("aria-busy", "false");
@@ -680,6 +730,10 @@ function disconnect() {
   state.authController = null;
   reports.clear();
   $("login-btn").disabled = false;
+  state.insights.clear(); $("insight-list").replaceChildren();
+  $("trend-table").replaceChildren();
+  for (const id of ["ad-revenue","purchase-revenue","total-active","total-new","connected-count"]) $(id).textContent = "—";
+  $("range-note").textContent = "";
   $("portfolio-body").replaceChildren();
   $("portfolio-count").textContent = "연결 대기";
   $("private-content").setAttribute("aria-busy", "false");
@@ -741,12 +795,15 @@ $("settings-game").addEventListener("change", () => {
 });
 $("settings-btn").addEventListener("click", () => openSettings());
 $("manage-games").addEventListener("click", () => openSettings());
+$("nav-portfolio").addEventListener("click", event => { event.preventDefault(); selectGame("all"); });
+$("nav-detail").addEventListener("click", event => { if (!selectedGame()) { event.preventDefault(); notify("먼저 분석할 게임을 선택해 주세요."); } });
 $("login-btn").addEventListener("click", connect);
 $("welcome-connect").addEventListener("click", connect);
 $("logout-btn").addEventListener("click", disconnect);
 $("refresh-btn").addEventListener("click", () => { reports.cache.clear(); refresh(); });
-for (const id of ["period", "country", "acquisition", "campaign", "ad"]) {
+for (const id of ["period", "country", "platform", "app-version", "start-date", "end-date", "acquisition", "campaign", "ad"]) {
   $(id).addEventListener("change", () => {
+    $("custom-dates").hidden = $("period").value !== "custom";
     if (id === "acquisition" && !$(id).value) { $("campaign").value = ""; $("ad").value = ""; }
     if (id === "campaign") $("ad").value = "";
     if ((id === "campaign" || id === "ad") && $(id).value) $("acquisition").value = "meta";

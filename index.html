@@ -9,11 +9,11 @@
       content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; connect-src 'self' https://accounts.google.com/gsi/ https://analyticsdata.googleapis.com https://openidconnect.googleapis.com; frame-src https://accounts.google.com/gsi/; img-src 'self' data:; base-uri 'none'; object-src 'none'; form-action 'none'"
     />
     <title>V8REDLINE · 게임 운영센터</title>
-    <link rel="stylesheet" href="styles.css?v=d8321d02c9e5" />
+    <link rel="stylesheet" href="styles.css?v=806a2bc04a07" />
     <script defer src="https://accounts.google.com/gsi/client"></script>
-    <script defer src="core.js?v=515b680a295e"></script>
-    <script defer src="attribution.js?v=56ecf8039d36"></script>
-    <script defer src="app.js?v=4ebee362d369"></script>
+    <script defer src="core.js?v=d00aa62f5728"></script>
+    <script defer src="attribution.js?v=c77ac5f46d48"></script>
+    <script defer src="app.js?v=43d9032fe38f"></script>
   </head>
   <body>
     <div class="shell">
@@ -23,8 +23,8 @@
           <div><b>V8REDLINE</b><small>GAME ANALYTICS</small></div>
         </div>
         <p class="nav-label">GAME WORKSPACE</p>
-        <a class="nav-item selected" href="#portfolio"><span>▦</span> 전체 게임 현황</a>
-        <a class="nav-item" href="#game-detail"><span>◈</span> 선택 게임 상세</a>
+        <a id="nav-portfolio" class="nav-item selected" href="#portfolio"><span>▦</span> 전체 게임 현황</a>
+        <a id="nav-detail" class="nav-item" href="#detail-summary"><span>◈</span> 선택 게임 상세</a>
         <button id="manage-games" class="nav-item">⚙ 게임 연결 관리</button>
         <p class="sidebar-note">11개 게임 · 계정 한 번 연결<br>실제 GA4 데이터로 운영 현황을 확인합니다.</p>
         <div class="side-footer">
@@ -76,37 +76,40 @@
               ><span id="updated">데이터를 불러오지 않았어요</span>
             </div>
             <div class="filters">
+              <label>플랫폼<select id="platform"><option value="">전체 플랫폼</option><option value="Android">Android</option><option value="iOS">iOS</option><option value="Web">Web</option></select></label>
+              <label>앱 버전<input id="app-version" placeholder="전체 버전" maxlength="40"></label>
               <label data-ubr>유입 <select id="acquisition"><option value="">전체 유입</option><option value="meta">메타 유료 유입</option></select></label>
               <label data-ubr>캠페인 <select id="campaign"><option value="">전체 캠페인</option></select></label>
               <label data-ubr>광고 <select id="ad"><option value="">전체 광고</option></select></label>
               <label
                 >국가
-                <select id="country">
-                  <option value="">전체 국가</option>
-                  <option value="Brazil">브라질</option>
-                  <option value="South Korea">대한민국</option>
-                </select></label
+                <input id="country" list="country-options" placeholder="전체 국가 · 예: Japan" maxlength="80"><datalist id="country-options"><option value="South Korea">대한민국</option><option value="Brazil">브라질</option><option value="Japan">일본</option><option value="United States">미국</option></datalist></label
               ><label
                 >기간
                 <select id="period">
-                  <option value="6daysAgo">최근 7일</option>
-                  <option value="27daysAgo" selected>최근 28일</option>
-                  <option value="89daysAgo">최근 90일</option>
+                  <option value="6daysAgo">최근 7일 · 어제까지</option>
+                  <option value="27daysAgo" selected>최근 28일 · 어제까지</option>
+                  <option value="89daysAgo">최근 90일 · 어제까지</option>
+                  <option value="custom">직접 선택</option>
                 </select></label
               ><button id="refresh-btn" class="btn subtle" disabled>
                 ↻ 새로고침
               </button>
             </div>
           </div>
+          <div id="custom-dates" class="filters" hidden><label>시작일<input type="date" id="start-date"></label><label>종료일<input type="date" id="end-date"></label></div>
+          <p id="range-note" class="range-note"></p>
+          <section id="insights" class="quality-note" aria-live="polite"><b>확인할 사항</b><ul id="insight-list"></ul></section>
+          <section id="portfolio-summary" class="stats" aria-label="조회된 게임 요약"><article class="stat"><span>조회한 게임</span><strong id="connected-count">—</strong><small>미연결 게임은 합계에서 제외</small></article><article class="stat"><span>활성 사용자 합계</span><strong id="total-active">—</strong><small>게임별 합산 · 중복 이용자 포함</small></article><article class="stat"><span>신규 사용자 합계</span><strong id="total-new">—</strong><small>같은 사람도 게임별로 집계</small></article></section>
           <div
             id="quality-note"
             class="quality-note hidden"
             role="status"
           ></div>
           <section class="panel portfolio" id="portfolio">
-            <div class="panel-head"><div><p class="kicker">YOUR GAMES, ONE VIEW</p><h2>게임 포트폴리오</h2><p>선택 기간의 GA4 활성·신규 사용자입니다. 오늘 수치는 처리 중일 수 있습니다.</p></div><span id="portfolio-count" class="tag">연결 대기</span></div>
-            <div class="table-wrap"><table><thead><tr><th>게임</th><th>연결 상태</th><th>활성 사용자</th><th>신규 사용자</th><th>속성 시간대</th><th>확인 시각·집계 상태</th><th></th></tr></thead><tbody id="portfolio-body"></tbody></table></div>
-            <p class="panel-note">연결 필요·권한 오류·데이터 없음을 구분합니다. 전체 게임의 동일 이용자를 합쳐 계산하지 않습니다. 이 표는 국가·기간 필터를 적용하며 게임 상세의 유입 필터는 제외합니다.</p>
+            <div class="panel-head"><div><p class="kicker">YOUR GAMES, ONE VIEW</p><h2>게임 포트폴리오</h2><p>선택 기간의 GA4 활성·신규 사용자입니다. 직전 동일 길이 기간과 비교합니다.</p></div><span id="portfolio-count" class="tag">연결 대기</span></div>
+            <div class="table-wrap"><table><thead><tr><th>게임</th><th>연결 상태</th><th>활성 사용자</th><th>신규 사용자</th><th>광고 매출 · GA4</th><th>구매 매출 · GA4</th><th>속성 시간대</th><th>확인 시각·집계 상태</th><th></th></tr></thead><tbody id="portfolio-body"></tbody></table></div>
+            <p class="panel-note">연결 필요·권한 오류·데이터 없음을 구분합니다. 전체 게임의 동일 이용자를 합쳐 계산하지 않습니다. 매출은 GA4 보고값이며 원장 대조 전입니다. 이 표는 국가·플랫폼·버전·기간 필터를 적용하며 게임 상세의 유입 필터는 제외합니다.</p>
           </section>
           <p id="selected-note" class="quality-note" role="status"></p>
           <div id="detail-summary" hidden>
@@ -116,14 +119,14 @@
                 <span>활성 사용자</span><i class="blue">♟</i>
               </div>
               <strong id="active-users">—</strong
-              ><small>선택 기간에 플레이한 사용자</small>
+              ><small id="active-change">비교 자료 없음</small>
             </article>
             <article class="stat">
               <div class="stat-top">
                 <span>신규 사용자</span><i class="gold">✦</i>
               </div>
               <strong id="new-users">—</strong
-              ><small>선택 기간에 처음 방문</small>
+              ><small id="new-change">비교 자료 없음</small>
             </article>
             <article class="stat">
               <div class="stat-top">
@@ -139,7 +142,49 @@
               <strong id="rewards-earned">—</strong
               ><small>광고 보상 획득 횟수</small>
             </article>
+            <article class="stat"><span>광고 매출 · GA4 보고값</span><strong id="ad-revenue">—</strong><small id="ad-change">원장 대조 전</small></article>
+            <article class="stat"><span>구매 매출 · GA4 보고값</span><strong id="purchase-revenue">—</strong><small id="purchase-change">원장 대조 전</small></article>
           </section>
+          <p class="panel-note">매출은 GA4에 수신·집계된 값입니다. 정산·원장 대조는 별도이며 0원만으로 계측 완료를 판정하지 않습니다.</p>
+          </div>
+          <div id="common-detail" class="grid" hidden>
+            <section class="panel wide">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">DAILY ACTIVITY</p>
+                  <h2>일별 플레이</h2>
+                  <p>기간별 활성 사용자의 흐름</p>
+                </div>
+                <span class="tag light">일별 활성 사용자</span>
+              </div>
+              <div id="trend" class="placeholder">
+                <span>▥</span>
+                <p>연결 후 일별 추이를 보여드려요.</p>
+              </div>
+              <div class="table-wrap"><table><thead><tr><th>날짜</th><th>활성 사용자</th></tr></thead><tbody id="trend-table"></tbody></table></div>
+              <div class="footnote">
+                일별 사용자 수는 날짜마다 중복될 수 있어 기간 전체 사용자 수와
+                합계가 다릅니다. 아래 표에서 날짜별 수치를 확인할 수 있습니다.
+              </div>
+            </section>
+<section class="panel narrow">
+              <div class="panel-head">
+                <div>
+                  <p class="kicker">RETENTION</p>
+                  <h2>다시 찾아온 플레이어</h2>
+                  <p>최근 유입된 사용자 코호트</p>
+                </div>
+                <span class="panel-symbol">↗</span>
+              </div>
+              <div id="retention" class="placeholder">
+                <span>◌</span>
+                <p>연결 후 재방문율을 보여드려요.</p>
+              </div>
+              <div class="footnote">
+                8일 전부터 35일 전까지 처음 방문한 사용자를 기준으로 합니다.
+                전체 유입·전체 국가·전체 플랫폼·전체 버전 기준이며 현재 필터와 별도로 1일·7일 후 활동을 봅니다.
+              </div>
+            </section>
           </div>
           <div id="game-detail" hidden>
           <section class="panel acquisition-panel" id="acquisition-report">
@@ -220,42 +265,8 @@
                 횟수이며, 완료되지 않은 전투는 제외합니다.
               </div>
             </section>
-            <section class="panel narrow">
-              <div class="panel-head">
-                <div>
-                  <p class="kicker">RETENTION</p>
-                  <h2>다시 찾아온 플레이어</h2>
-                  <p>최근 유입된 사용자 코호트</p>
-                </div>
-                <span class="panel-symbol">↗</span>
-              </div>
-              <div id="retention" class="placeholder">
-                <span>◌</span>
-                <p>연결 후 재방문율을 보여드려요.</p>
-              </div>
-              <div class="footnote">
-                8일 전부터 35일 전까지 처음 방문한 사용자를 기준으로 합니다.
-                전체 유입·전체 국가 기준이며 광고 필터를 적용하지 않고 1일·7일 후 활동을 봅니다.
-              </div>
-            </section>
-            <section class="panel wide">
-              <div class="panel-head">
-                <div>
-                  <p class="kicker">DAILY ACTIVITY</p>
-                  <h2>일별 플레이</h2>
-                  <p>기간별 활성 사용자의 흐름</p>
-                </div>
-                <span class="tag light">일별 활성 사용자</span>
-              </div>
-              <div id="trend" class="placeholder">
-                <span>▥</span>
-                <p>연결 후 일별 추이를 보여드려요.</p>
-              </div>
-              <div class="footnote">
-                일별 사용자 수는 날짜마다 중복될 수 있어 기간 전체 사용자 수와
-                합계가 다릅니다.
-              </div>
-            </section>
+
+
             <section class="panel narrow">
               <div class="panel-head">
                 <div>

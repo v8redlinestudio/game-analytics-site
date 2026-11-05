@@ -29,7 +29,25 @@
     }).formatToParts(now).filter(p => p.type !== "literal").map(p => [p.type, p.value]));
     return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - days)).toISOString().slice(0, 10);
   }
-  function acquisitionBody({ period, country, timeZone, now = new Date() }) {
+  function acquisitionBody({ period, dateRange, country, timeZone, now = new Date() }) {
+    if (dateRange) {
+      const resolve = value => {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+        if (value === "today") return dateDaysAgo(0, timeZone, now);
+        if (value === "yesterday") return dateDaysAgo(1, timeZone, now);
+        const match = /^(\d+)daysAgo$/.exec(value);
+        if (!match) throw new Error("지원하지 않는 날짜입니다.");
+        return dateDaysAgo(Number(match[1]), timeZone, now);
+      };
+      const start = resolve(dateRange.startDate), end = resolve(dateRange.endDate);
+      const days = (Date.parse(end) - Date.parse(start)) / 86400000 + 1;
+      if (!Number.isInteger(days) || days < 1 || days > 366) throw new Error("조회 기간을 확인해 주세요.");
+      const dates = Array.from({length:days}, (_, i) => new Date(Date.parse(start) + i * 86400000).toISOString().slice(0,10).replaceAll("-", ""));
+      return { dateRanges:[dateRange], dimensions:DIMENSIONS.map(name=>({name})),metrics:[{name:"totalUsers"}],
+        dimensionFilter:combine(exact("country",country),metaFilter(),
+          {filter:{fieldName:"firstSessionDate",inListFilter:{values:dates}}},
+          {filter:{fieldName:"eventName",inListFilter:{values:EVENTS}}}),limit:"10000" };
+    }
     const match = /^(6|27|89)daysAgo$/.exec(period);
     if (!match) throw new Error("지원하지 않는 기간입니다.");
     const days = Number(match[1]);
