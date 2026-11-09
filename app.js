@@ -9,6 +9,7 @@ const AcquisitionCost = window.AcquisitionCost;
 let acquisitionCostController = null;
 const UnderSpark = window.UnderSparkAnalytics;
 let underSparkController = null;
+let refundController = null;
 const number = new Intl.NumberFormat("ko-KR");
 const $ = (id) => document.getElementById(id);
 const state = {
@@ -103,6 +104,7 @@ function updateGameView() {
   $("forgeline-behavior").hidden = !(forgeLine && selectedProperty());
   $("retention-default-note").hidden = forgeLine;
   $("retention-forgeline-note").hidden = !forgeLine;
+  refundController?.render();
   $("acquisition-report").hidden = !(ubr || (forgeLine && selectedProperty()));
   $("acquisition-state").textContent = forgeLine
     ? "ForgeLine Android의 GA4 수동 UTM 유입입니다. 기간과 국가를 적용합니다. Meta에서 실제 광고 클릭 후 설치가 귀속되는지는 검증 대기 중입니다."
@@ -702,6 +704,7 @@ async function refresh() {
   $("welcome").classList.add("hidden");
   setLoading();
   updateGameView();
+  void refundController?.loadLocal();
   setStatus("데이터 불러오는 중");
   $("status-dot").classList.add("loading");
   $("private-content").setAttribute("aria-busy", "true");
@@ -830,6 +833,7 @@ function connect() {
 function disconnect() {
   acquisitionCostController?.clear();
   underSparkController?.clear();
+  refundController?.clear(true);
   state.authGeneration++;
   state.authController?.abort();
   state.authController = null;
@@ -891,6 +895,17 @@ if (UnderSpark) underSparkController = UnderSpark.createController({document,
   active: () => Boolean(state.token) && selectedGame()?.profile === "underspark",
   version: () => state.generation, range: reportRange, filter: () => reportFilter(false),
   query: body => api("runReport", body), refresh,
+});
+if (window.RefundOperations) refundController = window.RefundOperations.createController({
+  document, games: Core.GAMES, active: () => Boolean(state.token) && Date.now() < state.expiry,
+  selected: () => selectedGame()?.id, legacyParser: UnderSpark?.parseImport,
+  readLocal: ["localhost", "127.0.0.1"].includes(window.location?.hostname) &&
+      window.location?.pathname.startsWith("/analytics/") ? async () => {
+    const response = await fetch("refund-operations.json", {headers: {"X-ProjectManager": "1"}, cache: "no-store"});
+    if (response.status === 404) return null;
+    if (!response.ok) throw Error("refund_snapshot_unavailable");
+    return response.json();
+  } : undefined,
 });
 for (const game of Core.GAMES) {
   for (const id of ["game-select", "settings-game"]) {

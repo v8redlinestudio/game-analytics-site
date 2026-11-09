@@ -15,7 +15,8 @@
     <script defer src="acquisition-cost.js?v=a75fc4b48d62"></script>
     <script defer src="attribution.js?v=315c3bc37059"></script>
     <script defer src="underspark.js?v=7a1821143bd2"></script>
-    <script defer src="app.js?v=9e9d9d633a25"></script>
+    <script defer src="refunds.js?v=ba9e61d793a9"></script>
+    <script defer src="app.js?v=a453749fc298"></script>
   </head>
   <body>
     <div class="shell">
@@ -29,6 +30,7 @@
         <a id="nav-detail" class="nav-item" href="#detail-summary"><span>◈</span> 선택 게임 상세</a>
         <button id="manage-games" class="nav-item">⚙ 게임 연결 관리</button>
         <p class="sidebar-note">11개 게임 · 계정 한 번 연결<br>실제 GA4 데이터로 운영 현황을 확인합니다.</p>
+        <a class="nav-item" href="#refund-operations"><span>↻</span> 환불 운영</a>
         <div class="side-footer">
           <span class="dot"></span> Firebase Analytics
           <small>게임 운영 리포트</small>
@@ -209,6 +211,15 @@
               </div>
             </section>
           </div>
+          <section id="refund-operations" class="panel" aria-label="공통 환불 운영">
+            <div class="panel-head"><div><p class="kicker">COMMERCE OPERATIONS</p><h2>환불 운영</h2><p>게임 서버에서 확인한 스토어 환불과 게임 내 재화 회수 결과를 게임별로 조회합니다.</p></div><div><button id="refund-refresh" class="btn subtle" type="button" hidden>최근 실행 불러오기</button> <button id="refund-clear" class="btn subtle" type="button">자료 해제</button></div></div>
+            <label class="field">환불 집계 JSON<input id="refund-file" type="file" accept="application/json,.json"></label>
+            <p id="refund-status" class="quality-note" role="status">공통 환불 집계 미선택</p>
+            <p id="refund-legacy" class="panel-note"></p>
+            <p id="refund-forgeline-note" class="panel-note" hidden>ForgeLine 집계는 현재 시험 원장만 연결되어 있습니다. 기존 회수는 최근 7일의 확정 원장 기록이며, 회수 가능과 검토 대기는 조회 시점의 대기열입니다.</p>
+            <div class="table-wrap"><table><thead><tr><th>게임</th><th>스토어</th><th>실행 상태</th><th>회수 완료</th><th>기존 회수</th><th>회수 가능</th><th>검토 대기</th><th>재시도</th><th>환불 아님</th></tr></thead><tbody id="refund-body"></tbody></table></div>
+            <p class="panel-note">선택한 게임과 파일의 실행 범위를 표시합니다. GA4 날짜·국가·버전 필터와 독립입니다. 파일은 이 브라우저의 메모리에만 보관합니다.</p>
+          </section>
           <section id="underspark-detail" hidden aria-label="UnderSpark 전용 지표">
             <div class="panel-head"><div><p class="kicker">UNDERSPARK</p><h2>교습·회로·전투</h2><p>기존 이벤트의 관측 건수 · 개인별 순차 퍼널과 구분합니다.</p></div><label>데이터 환경<select id="us-mode"><option value="production">운영만 · 테스트 제외</option><option value="test">시험만</option></select></label></div>
             <p id="us-status" class="quality-note" role="status">연결 후 조회합니다.</p>

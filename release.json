@@ -1,23 +1,25 @@
 {
   "sourceRepository": "rivergameforge-cell/ProjectManager",
-  "sourceCommit": "3dd0dc0c9a4b1514af7791b96323d8ce4b9b4972",
-  "previousSiteCommit": "7786bc60ace580c259f05ddc80f5cfa0dc5153a4",
-  "publishedAt": "2026-11-09T03:25:28.857121+00:00",
+  "sourceCommit": "54afff26bce244b2ef4143e7ed72339ff16f7d38",
+  "previousSiteCommit": "feaf691c8152b88f64a1c75d2f2873689a5a984d",
+  "publishedAt": "2026-11-09T04:05:01.052305+00:00",
   "sha256": {
-    "index.html": "fa8b8d5e65530cbe961b577194ab5cb2006f2312e2e4e65f7bee4414b750fbeb",
-    "app.js": "9e9d9d633a252a29bae5d851afbdc067856cc0aed138155a6c27cf88cada2dd4",
+    "index.html": "65f154d9cbf694d9323f068db41f5c3eecfcab68d2d00b5495e824b8b2de04e2",
+    "app.js": "a453749fc2988b78bca012d54507c00e732cb4521e693f9ba74a08cd4ee6ad6e",
     "core.js": "5c92e843b3af74316f0fb86ccb996f66dfa1e0c321b67f9ec10e0596adc61d7c",
     "attribution.js": "315c3bc3705930048bf6c6e4fbd203d50b88e838e92276b124322a1ca1d4dce8",
     "acquisition-cost.js": "a75fc4b48d62f42d64c7bf7e99c5e00d587a4b3af23fdbabaa5709f813f21cfb",
     "underspark.js": "7a1821143bd22d1d2c09f06a84eb3bf52322562bb1894c37e03b9cf3be852367",
     "styles.css": "f7c7a801a620a254d85d45380238b43cdfcd68e3b7befb37f76d2abbfd3e8af3",
     "privacy.html": "60548cf50c123568c0949c38c429a2d884b20ff20414d491e347f1a9be9f286a",
-    ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "refunds.js": "ba9e61d793a9b654c779065d0ff158ece7dde5bbc5e81d505329db3d9dc5dfbb"
   },
   "dataIncluded": false,
   "verification": {
-    "releaseNode": 51,
-    "sourceNode": 53,
-    "localHttp": 1
+    "releaseNode": 54,
+    "sourceNode": 56,
+    "localPython": 3,
+    "forgelineEmulator": 19
   }
 }
