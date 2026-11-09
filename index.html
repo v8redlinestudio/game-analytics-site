@@ -15,7 +15,7 @@
     <script defer src="acquisition-cost.js?v=a75fc4b48d62"></script>
     <script defer src="attribution.js?v=315c3bc37059"></script>
     <script defer src="underspark.js?v=7a1821143bd2"></script>
-    <script defer src="app.js?v=e21c5512fe86"></script>
+    <script defer src="app.js?v=9e9d9d633a25"></script>
   </head>
   <body>
     <div class="shell">
@@ -199,9 +199,13 @@
                 <span>◌</span>
                 <p>연결 후 재방문율을 보여드려요.</p>
               </div>
-              <div class="footnote">
+              <div id="retention-default-note" class="footnote">
                 8일 전부터 35일 전까지 처음 방문한 사용자를 기준으로 합니다.
                 전체 유입·전체 국가·전체 플랫폼·전체 버전 기준이며 현재 필터와 별도로 1일·7일 후 활동을 봅니다.
+              </div>
+              <div id="retention-forgeline-note" class="footnote" hidden>
+                태국 Android의 첫 접속일 코호트입니다. 선택 기간에서 최근 최대 28개 접속일을 조회하며 D1과 D7의 관측이 끝난 사용자만 각 분모에 포함합니다.
+                국가·플랫폼·버전 필터와 별도로 집계합니다. Meta 캠페인을 선택하면 해당 캠페인 귀속을 기준으로 봅니다.
               </div>
             </section>
           </div>

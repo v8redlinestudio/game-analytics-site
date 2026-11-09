@@ -101,6 +101,8 @@ function updateGameView() {
   $("detail-summary").hidden = !game || !selectedProperty();
   $("game-detail").hidden = !ubr;
   $("forgeline-behavior").hidden = !(forgeLine && selectedProperty());
+  $("retention-default-note").hidden = forgeLine;
+  $("retention-forgeline-note").hidden = !forgeLine;
   $("acquisition-report").hidden = !(ubr || (forgeLine && selectedProperty()));
   $("acquisition-state").textContent = forgeLine
     ? "ForgeLine Android의 GA4 수동 UTM 유입입니다. 기간과 국가를 적용합니다. Meta에서 실제 광고 클릭 후 설치가 귀속되는지는 검증 대기 중입니다."

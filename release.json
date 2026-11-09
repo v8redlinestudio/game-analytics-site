@@ -1,11 +1,11 @@
 {
   "sourceRepository": "rivergameforge-cell/ProjectManager",
-  "sourceCommit": "d9b96565b1d89e7bf3c5d3fe27087344a99ae435",
-  "previousSiteCommit": "637c82e34a814277b0cf1f27bf2f57fa7f37a0ce",
-  "publishedAt": "2026-11-09T03:22:00.961238+00:00",
+  "sourceCommit": "3dd0dc0c9a4b1514af7791b96323d8ce4b9b4972",
+  "previousSiteCommit": "7786bc60ace580c259f05ddc80f5cfa0dc5153a4",
+  "publishedAt": "2026-11-09T03:25:28.857121+00:00",
   "sha256": {
-    "index.html": "efe34c444809ec7b32c468b0f020002f4484bc033e5cfe02f915e828cb8a2233",
-    "app.js": "e21c5512fe86f52469108904e45573e8b8a856395f670d354e1f48ac4d437737",
+    "index.html": "fa8b8d5e65530cbe961b577194ab5cb2006f2312e2e4e65f7bee4414b750fbeb",
+    "app.js": "9e9d9d633a252a29bae5d851afbdc067856cc0aed138155a6c27cf88cada2dd4",
     "core.js": "5c92e843b3af74316f0fb86ccb996f66dfa1e0c321b67f9ec10e0596adc61d7c",
     "attribution.js": "315c3bc3705930048bf6c6e4fbd203d50b88e838e92276b124322a1ca1d4dce8",
     "acquisition-cost.js": "a75fc4b48d62f42d64c7bf7e99c5e00d587a4b3af23fdbabaa5709f813f21cfb",
