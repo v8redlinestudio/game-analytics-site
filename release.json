@@ -1,12 +1,13 @@
 {
   "sourceRepository": "rivergameforge-cell/ProjectManager",
   "sourceCommit": "54afff26bce244b2ef4143e7ed72339ff16f7d38",
+  "deploymentPatch": "09f1370ede3527acf3159ad366a561f647d3d5ab",
   "previousSiteCommit": "feaf691c8152b88f64a1c75d2f2873689a5a984d",
   "publishedAt": "2026-11-09T04:05:01.052305+00:00",
   "sha256": {
     "index.html": "65f154d9cbf694d9323f068db41f5c3eecfcab68d2d00b5495e824b8b2de04e2",
     "app.js": "a453749fc2988b78bca012d54507c00e732cb4521e693f9ba74a08cd4ee6ad6e",
-    "core.js": "5c92e843b3af74316f0fb86ccb996f66dfa1e0c321b67f9ec10e0596adc61d7c",
+    "core.js": "845282b27af8a84ccaa14b8d74e77d2fad061b334f252b3f2f114fdef0ade263",
     "attribution.js": "315c3bc3705930048bf6c6e4fbd203d50b88e838e92276b124322a1ca1d4dce8",
     "acquisition-cost.js": "a75fc4b48d62f42d64c7bf7e99c5e00d587a4b3af23fdbabaa5709f813f21cfb",
     "underspark.js": "7a1821143bd22d1d2c09f06a84eb3bf52322562bb1894c37e03b9cf3be852367",
