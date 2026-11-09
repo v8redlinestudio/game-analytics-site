@@ -1,12 +1,13 @@
 {
   "sourceRepository": "rivergameforge-cell/ProjectManager",
-  "sourceCommit": "c8087de60078d09240c5fb608b25d1cc34a215d7",
-  "publishedAt": "2026-11-05T03:28:24.498300+00:00",
+  "sourceCommit": "d9b96565b1d89e7bf3c5d3fe27087344a99ae435",
+  "previousSiteCommit": "637c82e34a814277b0cf1f27bf2f57fa7f37a0ce",
+  "publishedAt": "2026-11-09T03:22:00.961238+00:00",
   "sha256": {
-    "index.html": "8c204336595faf9ddc4b8dbdcc5969beb7730bdd92595209afc00d864c786dcd",
-    "app.js": "4f4734ecc71a8b96e3229b454f7cd0d18f9e9cafa577a6e5e10ba086b061de6b",
-    "core.js": "068b0419ac1870c30f07162b04b8eb6cdd56a37e9154ac5595d0bfee55f9adb6",
-    "attribution.js": "c77ac5f46d48475403a0f590744c446a3148560ee035ae97958804d73c692363",
+    "index.html": "efe34c444809ec7b32c468b0f020002f4484bc033e5cfe02f915e828cb8a2233",
+    "app.js": "e21c5512fe86f52469108904e45573e8b8a856395f670d354e1f48ac4d437737",
+    "core.js": "5c92e843b3af74316f0fb86ccb996f66dfa1e0c321b67f9ec10e0596adc61d7c",
+    "attribution.js": "315c3bc3705930048bf6c6e4fbd203d50b88e838e92276b124322a1ca1d4dce8",
     "acquisition-cost.js": "a75fc4b48d62f42d64c7bf7e99c5e00d587a4b3af23fdbabaa5709f813f21cfb",
     "underspark.js": "7a1821143bd22d1d2c09f06a84eb3bf52322562bb1894c37e03b9cf3be852367",
     "styles.css": "f7c7a801a620a254d85d45380238b43cdfcd68e3b7befb37f76d2abbfd3e8af3",
@@ -15,9 +16,8 @@
   },
   "dataIncluded": false,
   "verification": {
-    "localNode": 47,
-    "http": 1,
-    "browser": "synthetic CSV + 390px layout passed",
-    "metaLive": "blocked by human verification; no report data published"
+    "releaseNode": 51,
+    "sourceNode": 53,
+    "localHttp": 1
   }
 }
