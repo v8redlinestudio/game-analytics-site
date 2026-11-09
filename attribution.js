@@ -2,6 +2,7 @@
 // Campaign IDs only; never store click identifiers, tokens, or player identities.
 (function (root) {
   const EVENTS = ["first_open", "game_ready", "tutorial_finished", "boss_started", "boss_won", "reward_earned"];
+  const FORGELINE_EVENTS = ["first_open", "boot_complete", "tutorial_complete", "battle_start", "battle_end", "ad_result"];
   const SOURCES = ["meta", "facebook", "instagram", "fb", "ig", "facebook.com", "instagram.com"];
   const MEDIA = ["paid_social", "cpc", "paid", "cpm", "app_install"];
   const DIMENSIONS = ["firstUserManualSource", "firstUserManualCampaignId", "firstUserManualTerm", "firstUserManualAdContent", "eventName"];
@@ -29,7 +30,7 @@
     }).formatToParts(now).filter(p => p.type !== "literal").map(p => [p.type, p.value]));
     return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) - days)).toISOString().slice(0, 10);
   }
-  function acquisitionBody({ period, dateRange, country, timeZone, now = new Date() }) {
+  function acquisitionBody({ period, dateRange, country, timeZone, now = new Date(), events = EVENTS }) {
     if (dateRange) {
       const resolve = value => {
         if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -46,7 +47,7 @@
       return { dateRanges:[dateRange], dimensions:DIMENSIONS.map(name=>({name})),metrics:[{name:"totalUsers"}],
         dimensionFilter:combine(exact("country",country),metaFilter(),
           {filter:{fieldName:"firstSessionDate",inListFilter:{values:dates}}},
-          {filter:{fieldName:"eventName",inListFilter:{values:EVENTS}}}),limit:"10000" };
+          {filter:{fieldName:"eventName",inListFilter:{values:events}}}),limit:"10000" };
     }
     const match = /^(6|27|89)daysAgo$/.exec(period);
     if (!match) throw new Error("지원하지 않는 기간입니다.");
@@ -57,34 +58,94 @@
       dimensions: DIMENSIONS.map(name => ({ name })), metrics: [{ name: "totalUsers" }],
       dimensionFilter: combine(exact("country", country), metaFilter(),
         { filter: { fieldName: "firstSessionDate", inListFilter: { values: firstSessionDates } } },
-        { filter: { fieldName: "eventName", inListFilter: { values: EVENTS } } }),
+        { filter: { fieldName: "eventName", inListFilter: { values: events } } }),
       limit: "10000",
     };
   }
-  function aggregate(data) {
+  function aggregate(data, events = EVENTS) {
     const groups = new Map();
     for (const row of data.rows || []) {
       const d = (row.dimensionValues || []).map(v => v.value);
       const count = Number(row.metricValues?.[0]?.value);
-      if (d.length !== 5 || !EVENTS.includes(d[4]) || !Number.isFinite(count) || count < 0) continue;
+      if (d.length !== 5 || !events.includes(d[4]) || !Number.isFinite(count) || count < 0) continue;
       const key = JSON.stringify(d.slice(0, 4));
-      if (!groups.has(key)) groups.set(key, { ids: d.slice(0, 4), counts: Object.fromEntries(EVENTS.map(name => [name, 0])) });
+      if (!groups.has(key)) groups.set(key, { ids: d.slice(0, 4), counts: Object.fromEntries(events.map(name => [name, 0])) });
       // Data API already deduplicates users within each ad/event group.
       groups.get(key).counts[d[4]] = count;
     }
     return [...groups.values()].sort((a, b) => b.counts.first_open - a.counts.first_open || JSON.stringify(a.ids).localeCompare(JSON.stringify(b.ids)));
   }
-  function playUrl(campaign, adset, ad) {
+  function playUrl(campaign, adset, ad, gameId = "unlimitbossrun") {
+    if (gameId !== "forgeline" && gameId !== "unlimitbossrun") throw new Error("설치 링크를 지원하는 게임을 선택해 주세요.");
     if (![campaign, adset, ad].every(v => typeof v === "string" && /^\d{1,32}$/.test(v))) {
       throw new Error("캠페인·광고 세트·광고의 숫자 ID를 모두 입력해 주세요.");
     }
     const referrer = new URLSearchParams({ utm_source: "meta", utm_medium: "paid_social", utm_campaign: campaign, utm_id: campaign, utm_term: adset, utm_content: ad });
     const url = new URL("https://play.google.com/store/apps/details");
-    url.searchParams.set("id", "com.v8redline.unlimitbossrun");
+    const packageName = gameId === "forgeline" ? "com.v8redline.forgeline" : "com.v8redline.unlimitbossrun";
+    url.searchParams.set("id", packageName);
     url.searchParams.set("referrer", referrer.toString());
     return url.toString();
   }
-  const api = Object.freeze({ EVENTS, DIMENSIONS, combine, metaFilter, audienceFilter, dateDaysAgo, acquisitionBody, aggregate, playUrl });
+  function forgeLineCohorts({ dateRange, timeZone, now = new Date(), campaign, ad }) {
+    const day = 86400000;
+    const asDate = ms => new Date(ms).toISOString().slice(0, 10);
+    const resolve = text => {
+      if (text === "today") return dateDaysAgo(0, timeZone, now);
+      if (text === "yesterday") return dateDaysAgo(1, timeZone, now);
+      const relative = /^(\d+)daysAgo$/.exec(text);
+      return relative ? dateDaysAgo(Number(relative[1]), timeZone, now) : text;
+    };
+    const today = Date.parse(dateDaysAgo(0, timeZone, now));
+    const last = Math.min(Date.parse(resolve(dateRange.endDate)), today - 2 * day);
+    const first = Math.max(Date.parse(resolve(dateRange.startDate)), last - 27 * day);
+    const dates = [];
+    for (let cursor = first; cursor <= last; cursor += day) dates.push(asDate(cursor));
+    const cohorts = dates.map(date => ({ name: `d${date}`, dimension: "firstSessionDate", dateRange: { startDate: date, endDate: date } }));
+    const android = exact("platform", "Android");
+    const thailand = exact("country", "Thailand");
+    const body = filter => ({
+      dimensions: ["cohort", "cohortNthDay"].map(name => ({ name })),
+      metrics: ["cohortActiveUsers", "cohortTotalUsers"].map(name => ({ name })),
+      cohortSpec: { cohorts, cohortsRange: { granularity: "DAILY", endOffset: 7 } },
+      dimensionFilter: combine(android, filter),
+    });
+    const paid = audienceFilter({ country: campaign ? "" : "Thailand", meta: true, campaign, ad });
+    return {
+      dates,
+      today: asDate(today),
+      segments: [
+        { label: "Meta 유료", request: body(paid) },
+        { label: "자연 유입", request: body(combine(thailand, exact("firstUserMedium", "organic"))) },
+        { label: "직접·귀속 미확인", request: body(combine(thailand, { filter: { fieldName: "firstUserMedium", inListFilter: { values: ["(none)", "(not set)"] } } })) },
+      ],
+    };
+  }
+  function matureRetention(data, dates, today) {
+    const unavailable = data.metadata?.subjectToThresholding === true || Boolean(data.metadata?.samplingMetadatas?.length);
+    const cells = new Map();
+    for (const row of data.rows || []) {
+      const [name, nth] = (row.dimensionValues || []).map(v => v.value);
+      const [active, total] = (row.metricValues || []).map(v => Number(v.value));
+      if (!name || !/^\d+$/.test(nth) || !Number.isSafeInteger(active) || !Number.isSafeInteger(total) || active < 0 || active > total) continue;
+      cells.set(`${name}/${Number(nth)}`, { active, total });
+    }
+    return [1, 7].map(day => {
+      if (unavailable) return { day, unavailable };
+      let returned = 0, total = 0;
+      for (const date of dates) {
+        if (Date.parse(date) + day * 86400000 >= Date.parse(today)) continue;
+        const first = cells.get(`d${date}/0`);
+        if (!first) continue;
+        const observed = cells.get(`d${date}/${day}`);
+        if (observed && observed.total !== first.total) return { day, unavailable: true };
+        total += first.total;
+        returned += observed?.active || 0;
+      }
+      return { day, total, returned };
+    });
+  }
+  const api = Object.freeze({ EVENTS, FORGELINE_EVENTS, DIMENSIONS, combine, metaFilter, audienceFilter, dateDaysAgo, acquisitionBody, aggregate, playUrl, forgeLineCohorts, matureRetention });
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.UBRAttribution = api;
 })(typeof window !== "undefined" ? window : globalThis);

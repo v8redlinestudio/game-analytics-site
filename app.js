@@ -32,6 +32,27 @@ const funnelSteps = [
   ["보스 도전", "boss_started"],
   ["보스 처치", "boss_won"],
 ];
+const forgeLineBehaviorEvents = [
+  ["첫 실행", "first_open"],
+  ["로비 진입 완료", "boot_complete"],
+  ["튜토리얼 시작", "tutorial_start"],
+  ["튜토리얼 단계 진행", "tutorial_step"],
+  ["튜토리얼 완료", "tutorial_complete"],
+  ["튜토리얼 건너뛰기", "tutorial_skip"],
+  ["전투 시작 기록", "battle_start"],
+  ["전투 종료", "battle_end"],
+  ["패배 후 성장 안내 클릭", "growth_guide_click"],
+  ["장비 비교", "choice_compare_view"],
+  ["비교 후 장비 적용", "choice_compare_commit"],
+  ["미션 조회", "mission_view"],
+  ["미션 보상 수령 요청 결과", "mission_claim"],
+  ["광고 시도", "ad_offer"],
+  ["광고 결과", "ad_result"],
+  ["결제 상품 상세 조회", "iap_detail_view"],
+  ["구매 시도", "iap_attempt"],
+  ["구매 결과", "iap_result"],
+  ["구매 복구 결과", "iap_restore_result"],
+];
 const labels = {
   manual: "직접 중단",
   bag_full: "가방 가득 참",
@@ -74,22 +95,32 @@ function updateGameView() {
   const game = selectedGame();
   $("page-heading").textContent = game ? game.name + " · 플레이 리포트" : "전체 게임 현황";
   const ubr = game?.profile === "ubr" && Boolean(selectedProperty());
+  const forgeLine = game?.id === "forgeline";
   const underspark = game?.profile === "underspark" && Boolean(selectedProperty());
   $("underspark-detail").hidden = !underspark;
   $("detail-summary").hidden = !game || !selectedProperty();
   $("game-detail").hidden = !ubr;
+  $("forgeline-behavior").hidden = !(forgeLine && selectedProperty());
+  $("acquisition-report").hidden = !(ubr || (forgeLine && selectedProperty()));
+  $("acquisition-state").textContent = forgeLine
+    ? "ForgeLine Android의 GA4 수동 UTM 유입입니다. 기간과 국가를 적용합니다. Meta에서 실제 광고 클릭 후 설치가 귀속되는지는 검증 대기 중입니다."
+    : "Meta 앱 등록·광고 계정 연결은 완료했으며, 앱 이벤트 수신과 실제 광고 클릭 후 설치 귀속은 아직 검증 전입니다. 아래 표는 추적 매개변수로 Google Analytics에 확인된 메타 유료 유입만 표시합니다.";
+  $("acquisition-start").textContent = forgeLine ? "전투 진입" : "보스 도전";
+  $("acquisition-finish").textContent = forgeLine ? "전투 종료" : "보스 처치";
+  $("acquisition-ad-result").textContent = forgeLine ? "광고 결과 기록" : "광고 보상 획득";
   $("paid-acquisition").hidden = !ubr;
   $("common-detail").hidden = !game || !selectedProperty();
   $("portfolio").hidden = Boolean(game);
   $("portfolio-summary").hidden = Boolean(game);
   $("nav-portfolio").classList.toggle("selected", !game);
   $("nav-detail").classList.toggle("selected", Boolean(game));
-  for (const node of document.querySelectorAll("[data-ubr]")) node.hidden = !ubr;
+  for (const node of document.querySelectorAll("[data-acquisition]")) node.hidden = !(ubr || (forgeLine && selectedProperty()));
   for (const id of ["boss-attempts", "rewards-earned"]) $(id).closest("article").hidden = !ubr;
   $("selected-note").textContent = !game ? "게임을 선택하면 상세 분석이 열립니다." :
     !selectedProperty() ? game.name + "의 GA4 속성을 연결해 주세요." : ubr ?
     "또 보스냐의 기존 이벤트 계약으로 보스·광고·성장·유입을 분석합니다." : underspark ?
-    "UnderSpark 교습·전투는 GA4, 광고 지급·금액은 서버 집계 파일로 원천을 구분합니다. 기본값은 테스트 제외입니다." :
+    "UnderSpark 교습·전투는 GA4, 광고 지급·금액은 서버 집계 파일로 원천을 구분합니다. 기본값은 테스트 제외입니다." : forgeLine ?
+    "ForgeLine의 사용자 추이, 주요 행동, Android Meta 유입과 태국 재방문을 조회합니다." :
     game.name + "의 기본 사용자 지표입니다. 게임 전용 이벤트 매핑은 후속 연결이 필요합니다.";
 }
 function selectGame(id) {
@@ -98,6 +129,8 @@ function selectGame(id) {
   state.gameId = id;
   $("game-select").value = id;
   for (const field of ["acquisition", "campaign", "ad"]) $(field).value = "";
+  for (const field of ["link-campaign", "link-adset", "link-ad", "play-link"]) $(field).value = "";
+  $("link-message").textContent = "";
   options("campaign", [], "전체 캠페인");
   options("ad", [], "전체 광고");
   updateGameView();
@@ -159,6 +192,7 @@ function setLoading() {
     $(id).textContent = "—";
   for (const id of [
     "funnel",
+    "forgeline-behavior-list",
     "ads-list",
     "retention",
     "trend",
@@ -328,17 +362,20 @@ function requireTimeZone() {
 async function loadAcquisition() {
   requireTimeZone();
   const generation = state.generation;
+  const forgeLine = selectedGame()?.id === "forgeline";
+  const events = forgeLine ? Attribution.FORGELINE_EVENTS : Attribution.EVENTS;
   const body = Attribution.acquisitionBody({
-    period: $("period").value, dateRange: reportRange(), country: $("country").value, timeZone: state.reportTimeZone,
+    period: $("period").value, dateRange: reportRange(), country: $("country").value, timeZone: state.reportTimeZone, events,
   });
-  body.dimensionFilter = combine(body.dimensionFilter, commonFilter());
+  const android = {filter:{fieldName:"platform",stringFilter:{matchType:"EXACT",value:"Android"}}};
+  body.dimensionFilter = combine(body.dimensionFilter, forgeLine ? android : commonFilter());
   const data = await api("runReport", body);
   if (generation !== state.generation || !state.token) return;
-  if (acquisitionCostController) {
+  if (acquisitionCostController && !forgeLine) {
     const r=reportRange(),resolve=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)?v:Attribution.dateDaysAgo(v==="yesterday"?1:v==="today"?0:Number(v.replace("daysAgo","")),state.reportTimeZone);
     acquisitionCostController.setCohort(data,{start:resolve(r.startDate),end:resolve(r.endDate),timeZone:state.reportTimeZone,filtered:Boolean($("country").value||$("platform").value||$("app-version").value.trim()||$("campaign").value||$("ad").value)});
   }
-  const all = Attribution.aggregate(data);
+  const all = Attribution.aggregate(data, events);
   options("campaign", all.map(row => row.ids[1]), "전체 캠페인");
   options("ad", all.filter(row => !$("campaign").value || row.ids[1] === $("campaign").value).map(row => row.ids[3]), "전체 광고");
   const selected = all.filter(row => (!$("campaign").value || row.ids[1] === $("campaign").value) && (!$("ad").value || row.ids[3] === $("ad").value));
@@ -349,7 +386,7 @@ async function loadAcquisition() {
   clearNode($("acquisition-table"));
   for (const item of selected) {
     const tr = elem("tr");
-    for (const value of [...item.ids.map(id => !id || id === "(not set)" ? "미확인" : id), ...Attribution.EVENTS.map(event => number.format(item.counts[event]))]) {
+    for (const value of [...item.ids.map(id => !id || id === "(not set)" ? "미확인" : id), ...events.map(event => number.format(item.counts[event]))]) {
       tr.append(elem("td", value));
     }
     $("acquisition-table").append(tr);
@@ -428,6 +465,22 @@ async function loadFunnel() {
     $("funnel").append(elem("p", "일부 단계가 응답에 없습니다. 0명으로 단정하지 않고 수신·집계 상태를 확인하세요.", "panel-note"));
     state.insights.add("퍼널 일부 단계가 응답에 없습니다. 실제 미도달과 계측 누락을 구분해 확인하세요.");
   }
+}
+async function loadBehaviorEvents(id, events) {
+  const data = await api("runReport", requestBody(
+    ["eventName"], ["totalUsers", "eventCount"],
+    combine(reportFilter(), eventFilter(events.map(([, event]) => event))),
+  ));
+  const observed = new Map(rows(data).map(({ d, m }) => [d[0], m]));
+  const limited = Core.quality(data).length > 0;
+  renderList(id, observed.size ? events.map(([label, event]) => {
+    const counts = observed.get(event);
+    const display = counts?.length === 2 && counts.every(Number.isFinite)
+      ? `${number.format(counts[0])}명 · ${number.format(counts[1])}회`
+      : limited ? "집계 제한" : "보고된 행 없음";
+    return { label, display };
+  }) : []);
+  if (!observed.size && limited) message(id, "집계 제한으로 표시할 수 있는 행이 없습니다.");
 }
 async function loadBoss() {
   const d = await api(
@@ -521,6 +574,26 @@ async function loadRetention() {
     return;
   }
   requireTimeZone();
+  if (selectedGame()?.id === "forgeline") {
+    const query = Attribution.forgeLineCohorts({
+      dateRange: reportRange(), timeZone: state.reportTimeZone, campaign: $("campaign").value, ad: $("ad").value,
+    });
+    if (!query.dates.length) {
+      message("retention", "선택 기간에 D1 관측이 끝난 태국 코호트가 없습니다.");
+      return;
+    }
+    const items = [];
+    for (const segment of query.segments) {
+      const report = await api("runReport", segment.request);
+      for (const row of Attribution.matureRetention(report, query.dates, query.today)) {
+        items.push({ label: `태국 ${segment.label} · D${row.day}`, display: row.unavailable ? "집계 제한" :
+          row.total ? `${pct(row.returned, row.total)} (${number.format(row.returned)}/${number.format(row.total)})` : "관측 표본 없음" });
+      }
+    }
+    items.push({ label: "집계 범위", display: "분석 동의 사용자 · 성숙 코호트 · 최대 최근 28일" });
+    renderList("retention", items, "retention-row");
+    return;
+  }
   const body = {
     dimensions: [{ name: "cohort" }, { name: "cohortNthDay" }],
     metrics: [{ name: "cohortActiveUsers" }, { name: "cohortTotalUsers" }],
@@ -607,7 +680,7 @@ async function refresh() {
     state.controller?.abort(); state.generation++; state.insights.clear(); state.insights.add(error.message); showInsights();
     for (const id of ["active-users","new-users","ad-revenue","purchase-revenue","boss-attempts","rewards-earned","total-active","total-new","connected-count"]) $(id).textContent = "—";
     for (const id of ["active-change","new-change","ad-change","purchase-change"]) $(id).textContent = "기간 입력 확인";
-    for (const id of ["trend","retention","funnel","ads-list","stops","loot","ad-types","economy"]) message(id,error.message);
+    for (const id of ["trend","retention","funnel","forgeline-behavior-list","ads-list","stops","loot","ad-types","economy"]) message(id,error.message);
     $("trend-table").replaceChildren(); $("portfolio-body").replaceChildren(); $("portfolio-count").textContent = "기간 입력 확인";
     showTableMessage(error.message); acquisitionMessage(error.message);
     $("range-note").textContent = "조회하지 않았습니다 · " + error.message;
@@ -638,8 +711,11 @@ async function refresh() {
     if (generation !== state.generation) return;
     if (selectedProperty()) {
       const tasks = [["요약", loadSummary, null],["일별 플레이",loadTrend,"trend"],["재방문",loadRetention,"retention"]];
+      if (selectedGame()?.profile === "ubr" || selectedGame()?.id === "forgeline")
+        tasks.push(["광고별 유입", loadAcquisition, "acquisition-table"]);
+      if (selectedGame()?.id === "forgeline")
+        tasks.push(["유저 행동", () => loadBehaviorEvents("forgeline-behavior-list", forgeLineBehaviorEvents), "forgeline-behavior-list"]);
       if (selectedGame()?.profile === "ubr") tasks.push(
-        ["광고별 유입", loadAcquisition, "acquisition-table"],
         ["광고", loadEvents, "ads-list"], ["퍼널", loadFunnel, "funnel"],
         ["보스", loadBoss, "boss-table"], ["중단 사유", loadStops, "stops"],
 
@@ -791,6 +867,7 @@ function disconnect() {
     $(id).textContent = "—";
   for (const id of [
     "funnel",
+    "forgeline-behavior-list",
     "ads-list",
     "retention",
     "trend",
@@ -872,7 +949,7 @@ document.addEventListener("visibilitychange", () => {
 
 $("build-link").addEventListener("click", () => {
   try {
-    $("play-link").value = Attribution.playUrl($("link-campaign").value.trim(), $("link-adset").value.trim(), $("link-ad").value.trim());
+    $("play-link").value = Attribution.playUrl($("link-campaign").value.trim(), $("link-adset").value.trim(), $("link-ad").value.trim(), state.gameId);
     $("link-message").textContent = "링크를 만들었습니다. 메타 광고 설정과 신규 설치 귀속 검증이 별도로 필요합니다.";
   } catch (e) {
     $("play-link").value = "";

@@ -11,11 +11,11 @@
     <title>V8REDLINE · 게임 운영센터</title>
     <link rel="stylesheet" href="styles.css?v=f7c7a801a620" />
     <script defer src="https://accounts.google.com/gsi/client"></script>
-    <script defer src="core.js?v=068b0419ac18"></script>
+    <script defer src="core.js?v=5c92e843b3af"></script>
     <script defer src="acquisition-cost.js?v=a75fc4b48d62"></script>
-    <script defer src="attribution.js?v=c77ac5f46d48"></script>
+    <script defer src="attribution.js?v=315c3bc37059"></script>
     <script defer src="underspark.js?v=7a1821143bd2"></script>
-    <script defer src="app.js?v=4f4734ecc71a"></script>
+    <script defer src="app.js?v=e21c5512fe86"></script>
   </head>
   <body>
     <div class="shell">
@@ -80,9 +80,9 @@
             <div class="filters">
               <label>플랫폼<select id="platform"><option value="">전체 플랫폼</option><option value="Android">Android</option><option value="iOS">iOS</option><option value="Web">Web</option></select></label>
               <label>앱 버전<input id="app-version" placeholder="전체 버전" maxlength="40"></label>
-              <label data-ubr>유입 <select id="acquisition"><option value="">전체 유입</option><option value="meta">메타 유료 유입</option></select></label>
-              <label data-ubr>캠페인 <select id="campaign"><option value="">전체 캠페인</option></select></label>
-              <label data-ubr>광고 <select id="ad"><option value="">전체 광고</option></select></label>
+              <label data-acquisition>유입 <select id="acquisition"><option value="">전체 유입</option><option value="meta">메타 유료 유입</option></select></label>
+              <label data-acquisition>캠페인 <select id="campaign"><option value="">전체 캠페인</option></select></label>
+              <label data-acquisition>광고 <select id="ad"><option value="">전체 광고</option></select></label>
               <label
                 >국가
                 <input id="country" list="country-options" placeholder="전체 국가 · 예: Japan" maxlength="80"><datalist id="country-options"><option value="South Korea">대한민국</option><option value="Brazil">브라질</option><option value="Japan">일본</option><option value="United States">미국</option></datalist></label
@@ -226,14 +226,19 @@
               <p class="panel-note">스토어 검증 결제액과 운영자 환불 원본 반입을 구분합니다. 고객 결제액·세액 기준을 유지하며 전체 환불 범위를 대조하지 않은 순매출·개발자 실수령액은 계산하지 않습니다. 구매 복원은 새 매출이 아니며 회수 재화는 현금 환불액이 아닙니다.</p>
             </section>
           </section>
-          <div id="game-detail" hidden>
-          <section class="panel acquisition-panel" id="acquisition-report">
-            <div class="panel-head"><div><p class="kicker">META ACQUISITION</p><h2>광고별 설치와 게임 진행</h2><p>선택 기간에 처음 유입된 사용자를 광고별로 비교합니다.</p></div><span class="pill">사용자 수</span></div>
-            <p class="acquisition-state">Meta 앱 등록·광고 계정 연결은 완료했으며, 앱 이벤트 수신과 실제 광고 클릭 후 설치 귀속은 아직 검증 전입니다. 아래 표는 추적 매개변수로 Google Analytics에 확인된 메타 유료 유입만 표시합니다.</p>
-            <div class="table-wrap"><table class="acquisition-table"><thead><tr><th>기록된 출처</th><th>캠페인 ID</th><th>광고 세트 ID</th><th>광고 ID</th><th>설치 후 첫 실행</th><th>게임 진입</th><th>튜토리얼 완료</th><th>보스 도전</th><th>보스 처치</th><th>광고 보상 획득</th></tr></thead><tbody id="acquisition-table"><tr><td colspan="10" class="empty">연결 후 광고별 기록이 표시됩니다.</td></tr></tbody></table></div>
-            <p class="panel-note">다운로드 후 실행하지 않은 설치는 집계되지 않습니다. 각 행동은 사용자 수이며 순차 도달률이 아닙니다. 캠페인이나 광고 ID가 없는 기록은 미확인으로 표시합니다. 메타 광고 관리자의 설치 수와는 집계 기준이 다릅니다.</p>
-            <details class="campaign-builder"><summary>광고 연결용 Google Play 링크 만들기</summary><p>메타에서 확인한 숫자 ID를 입력하세요. 광고 유형이 이 링크를 지원하는지 확인하고 신규 설치 경로를 검증한 뒤 사용하세요.</p><div class="filters"><label data-ubr>캠페인 ID<input id="link-campaign" inputmode="numeric" maxlength="32"></label><label>광고 세트 ID<input id="link-adset" inputmode="numeric" maxlength="32"></label><label>광고 ID<input id="link-ad" inputmode="numeric" maxlength="32"></label><button id="build-link" class="btn subtle">링크 만들기</button></div><label class="field">생성된 설치 링크<textarea id="play-link" readonly rows="3"></textarea></label><p id="link-message" role="status"></p></details>
+          <section class="panel" id="forgeline-behavior" hidden>
+            <div class="panel-head"><div><p class="kicker">PLAYER BEHAVIOR</p><h2>ForgeLine 유저 행동</h2><p>기간·국가·플랫폼·앱 버전·유입 필터를 적용한 행동별 사용자 수와 기록 횟수입니다.</p></div></div>
+            <div id="forgeline-behavior-list" class="placeholder"><p>연결 후 행동 기록이 표시됩니다.</p></div>
+            <p class="panel-note">각 행동은 독립 집계입니다. 전투 시작 기록은 전투 종료 때 함께 전송합니다. 앱 강제 종료로 누락된 전투, 광고 보상 실제 지급, 구매 정산은 이 표에서 판정하지 않습니다.</p>
           </section>
+          <section class="panel acquisition-panel" id="acquisition-report" hidden>
+            <div class="panel-head"><div><p class="kicker">META ACQUISITION</p><h2>광고별 설치와 게임 진행</h2><p>선택 기간에 처음 유입된 사용자를 광고별로 비교합니다.</p></div><span class="pill">사용자 수</span></div>
+            <p class="acquisition-state" id="acquisition-state">Meta 앱 등록·광고 계정 연결은 완료했으며, 앱 이벤트 수신과 실제 광고 클릭 후 설치 귀속은 아직 검증 전입니다. 아래 표는 추적 매개변수로 Google Analytics에 확인된 메타 유료 유입만 표시합니다.</p>
+            <div class="table-wrap"><table class="acquisition-table"><thead><tr><th>기록된 출처</th><th>캠페인 ID</th><th>광고 세트 ID</th><th>광고 ID</th><th>설치 후 첫 실행</th><th>게임 진입</th><th>튜토리얼 완료</th><th id="acquisition-start">보스 도전</th><th id="acquisition-finish">보스 처치</th><th id="acquisition-ad-result">광고 보상 획득</th></tr></thead><tbody id="acquisition-table"><tr><td colspan="10" class="empty">연결 후 광고별 기록이 표시됩니다.</td></tr></tbody></table></div>
+            <p class="panel-note">다운로드 후 실행하지 않은 설치는 집계되지 않습니다. 각 행동은 사용자 수이며 순차 도달률이 아닙니다. 캠페인이나 광고 ID가 없는 기록은 미확인으로 표시합니다. 메타 광고 관리자의 설치 수와는 집계 기준이 다릅니다.</p>
+            <details class="campaign-builder"><summary>광고 연결용 Google Play 링크 만들기</summary><p>메타에서 확인한 숫자 ID를 입력하세요. 광고 유형이 이 링크를 지원하는지 확인하고 신규 설치 경로를 검증한 뒤 사용하세요.</p><div class="filters"><label data-acquisition>캠페인 ID<input id="link-campaign" inputmode="numeric" maxlength="32"></label><label>광고 세트 ID<input id="link-adset" inputmode="numeric" maxlength="32"></label><label>광고 ID<input id="link-ad" inputmode="numeric" maxlength="32"></label><button id="build-link" class="btn subtle">링크 만들기</button></div><label class="field">생성된 설치 링크<textarea id="play-link" readonly rows="3"></textarea></label><p id="link-message" role="status"></p></details>
+          </section>
+          <div id="game-detail" hidden>
           <div class="grid">
             <section class="panel wide" id="progress">
               <div class="panel-head">
