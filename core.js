@@ -9,7 +9,6 @@
     { id: "machomade", name: "마초메이드" },
     { id: "underspark", name: "UnderSpark", profile: "underspark", propertyId: "560510698" },
     { id: "forgeline", name: "ForgeLine", propertyId: "563027639" },
-    { id: "shrimpgrow", name: "ShrimpGrow" },
     { id: "nightscape", name: "야경수호대" },
     { id: "redline", name: "REDLINE" },
     { id: "royalslimepop", name: "Royal Slime Pop" },
